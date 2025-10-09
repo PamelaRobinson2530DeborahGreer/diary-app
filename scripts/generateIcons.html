@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA 图标生成器</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #3b82f6;
+      margin-bottom: 24px;
+    }
+    .controls {
+      margin-bottom: 24px;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 12px;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    .preview {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    .preview-item {
+      text-align: center;
+    }
+    .preview-item canvas {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .preview-item p {
+      margin-top: 8px;
+      color: #666;
+      font-size: 14px;
+    }
+    .instructions {
+      background: #f0f9ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin-top: 24px;
+      border-radius: 4px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #3b82f6;
+    }
+    .instructions code {
+      background: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📱 Journal App PWA 图标生成器</h1>
+
+    <div class="controls">
+      <button onclick="generateIcons()">生成所有图标</button>
+      <button onclick="downloadAll()">下载全部</button>
+    </div>
+
+    <div class="preview" id="preview"></div>
+
+    <div class="instructions">
+      <h3>使用说明</h3>
+      <ol>
+        <li>点击 <strong>"生成所有图标"</strong> 按钮</li>
+        <li>等待图标渲染完成（会显示预览）</li>
+        <li>点击 <strong>"下载全部"</strong> 按钮</li>
+        <li>将下载的文件替换到 <code>public/</code> 目录下</li>
+        <li>文件列表：
+          <ul>
+            <li><code>icon-192.png</code> - 192x192 标准图标</li>
+            <li><code>icon-512.png</code> - 512x512 标准图标</li>
+            <li><code>icon-maskable-192.png</code> - 192x192 maskable 图标</li>
+            <li><code>icon-maskable-512.png</code> - 512x512 maskable 图标</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const canvases = {};
+
+    function drawIcon(canvas, size, isMaskable = false) {
+      const ctx = canvas.getContext('2d');
+      canvas.width = size;
+      canvas.height = size;
+
+      // 渐变背景
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#3b82f6');
+      gradient.addColorStop(1, '#2563eb');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      // Maskable 安全区调整 (80% 内容区域)
+      const safeZoneMargin = isMaskable ? size * 0.1 : 0;
+      const contentSize = size - (safeZoneMargin * 2);
+
+      ctx.save();
+      ctx.translate(safeZoneMargin, safeZoneMargin);
+
+      // 日记本白色底
+      const noteWidth = contentSize * 0.6;
+      const noteHeight = contentSize * 0.55;
+      const noteX = (contentSize - noteWidth) / 2;
+      const noteY = (contentSize - noteHeight) / 2;
+
+      // 阴影
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      ctx.shadowBlur = size * 0.01;
+      ctx.shadowOffsetX = size * 0.004;
+      ctx.shadowOffsetY = size * 0.004;
+
+      // 白色日记本
+      ctx.fillStyle = 'white';
+      const radius = size * 0.03;
+      ctx.beginPath();
+      ctx.roundRect(noteX, noteY, noteWidth, noteHeight, radius);
+      ctx.fill();
+
+      // 重置阴影
+      ctx.shadowColor = 'transparent';
+
+      // 红色装订线
+      const bindingX = noteX + noteWidth * 0.15;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = size * 0.008;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(bindingX, noteY + noteHeight * 0.1);
+      ctx.lineTo(bindingX, noteY + noteHeight * 0.9);
+      ctx.stroke();
+
+      // 横线（纸张效果）
+      const lineStartX = noteX + noteWidth * 0.25;
+      const lineEndX = noteX + noteWidth * 0.9;
+      const lineSpacing = noteHeight * 0.15;
+      const firstLineY = noteY + noteHeight * 0.3;
+
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = size * 0.004;
+
+      for (let i = 0; i < 4; i++) {
+        const y = firstLineY + (lineSpacing * i);
+        ctx.beginPath();
+        ctx.moveTo(lineStartX, y);
+        ctx.lineTo(lineEndX, y);
+        ctx.stroke();
+      }
+
+      // "日" 字
+      ctx.fillStyle = '#3b82f6';
+      ctx.font = `700 ${size * 0.2}px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('日', contentSize / 2, contentSize / 2);
+
+      ctx.restore();
+    }
+
+    function generateIcons() {
+      const sizes = [
+        { size: 192, name: 'icon-192.png', maskable: false },
+        { size: 512, name: 'icon-512.png', maskable: false },
+        { size: 192, name: 'icon-maskable-192.png', maskable: true },
+        { size: 512, name: 'icon-maskable-512.png', maskable: true }
+      ];
+
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '';
+
+      sizes.forEach(({ size, name, maskable }) => {
+        const container = document.createElement('div');
+        container.className = 'preview-item';
+
+        const canvas = document.createElement('canvas');
+        drawIcon(canvas, size, maskable);
+        canvases[name] = canvas;
+
+        const displayCanvas = document.createElement('canvas');
+        const displaySize = 150;
+        displayCanvas.width = displaySize;
+        displayCanvas.height = displaySize;
+        const displayCtx = displayCanvas.getContext('2d');
+        displayCtx.imageSmoothingEnabled = true;
+        displayCtx.imageSmoothingQuality = 'high';
+        displayCtx.drawImage(canvas, 0, 0, size, size, 0, 0, displaySize, displaySize);
+
+        const label = document.createElement('p');
+        label.textContent = `${name} (${size}x${size})${maskable ? ' - Maskable' : ''}`;
+
+        container.appendChild(displayCanvas);
+        container.appendChild(label);
+        preview.appendChild(container);
+      });
+
+      console.log('✅ 所有图标生成完成！');
+    }
+
+    function downloadAll() {
+      if (Object.keys(canvases).length === 0) {
+        alert('请先点击"生成所有图标"按钮');
+        return;
+      }
+
+      Object.entries(canvases).forEach(([name, canvas]) => {
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = name;
+          a.click();
+          URL.revokeObjectURL(url);
+        }, 'image/png', 1.0);
+      });
+
+      console.log('✅ 开始下载所有图标...');
+    }
+
+    // 添加 roundRect polyfill (Safari 兼容)
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r);
+        this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r);
+        this.closePath();
+        return this;
+      };
+    }
+
+    // 自动生成（可选）
+    window.addEventListener('load', () => {
+      console.log('页面加载完成，准备生成图标');
+    });
+  </script>
+</body>
+</html>

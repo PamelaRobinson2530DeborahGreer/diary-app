@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Journal App - 专业图标生成器</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    #canvases {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .canvas-wrapper {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    .info {
+      margin-top: 8px;
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📝 Journal App - 专业图标生成器</h1>
+  <p>点击下方按钮下载所有图标，然后替换 <code>public/</code> 目录中的文件</p>
+  <button onclick="downloadAll()">⬇️ 下载所有图标</button>
+  <div id="canvases"></div>
+
+  <script>
+    const sizes = [
+      { size: 192, name: 'icon-192.png', desc: 'Android Chrome (192x192)' },
+      { size: 512, name: 'icon-512.png', desc: 'Android Chrome (512x512)' },
+      { size: 180, name: 'icon-180.png', desc: 'iOS Safari (180x180)' },
+      { size: 167, name: 'icon-167.png', desc: 'iOS iPad (167x167)' },
+      { size: 152, name: 'icon-152.png', desc: 'iOS iPad (152x152)' },
+      { size: 120, name: 'icon-120.png', desc: 'iOS iPhone (120x120)' }
+    ];
+
+    const canvasContainer = document.getElementById('canvases');
+
+    sizes.forEach(({ size, name, desc }) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+
+      const ctx = canvas.getContext('2d');
+
+      // 绘制图标
+      drawIcon(ctx, size);
+
+      // 添加到页面
+      const wrapper = document.createElement('div');
+      wrapper.className = 'canvas-wrapper';
+      wrapper.innerHTML = `
+        <div><strong>${name}</strong></div>
+        <div class="info">${desc}</div>
+      `;
+      wrapper.appendChild(canvas);
+      canvasContainer.appendChild(wrapper);
+
+      // 存储 canvas 引用用于下载
+      canvas.dataset.name = name;
+    });
+
+    /**
+     * 绘制专业日记本图标
+     */
+    function drawIcon(ctx, size) {
+      // 清除画布
+      ctx.clearRect(0, 0, size, size);
+
+      // 1. 绘制渐变背景
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#3b82f6');   // 品牌蓝
+      gradient.addColorStop(1, '#2563eb');   // 深蓝
+
+      ctx.fillStyle = gradient;
+      const radius = size / 8;
+      roundRect(ctx, 0, 0, size, size, radius);
+      ctx.fill();
+
+      // 2. 绘制日记本外形
+      const padding = size * 0.2;
+      const bookWidth = size - 2 * padding;
+      const bookHeight = size * 0.6;
+      const bookX = padding;
+      const bookY = (size - bookHeight) / 2;
+
+      // 日记本背景（白色带阴影）
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      ctx.shadowBlur = size * 0.02;
+      ctx.shadowOffsetX = size * 0.01;
+      ctx.shadowOffsetY = size * 0.01;
+
+      ctx.fillStyle = 'white';
+      roundRect(ctx, bookX, bookY, bookWidth, bookHeight, size * 0.04);
+      ctx.fill();
+
+      // 重置阴影
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
+      // 3. 绘制装订线（左侧红线）
+      const bindingX = bookX + bookWidth * 0.15;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = size * 0.01;
+      ctx.beginPath();
+      ctx.moveTo(bindingX, bookY + bookHeight * 0.1);
+      ctx.lineTo(bindingX, bookY + bookHeight * 0.9);
+      ctx.stroke();
+
+      // 4. 绘制横线（日记本纸张效果）
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = size * 0.005;
+      const lineSpacing = bookHeight * 0.12;
+      const lineStartX = bindingX + bookWidth * 0.1;
+      const lineEndX = bookX + bookWidth * 0.9;
+      const firstLineY = bookY + bookHeight * 0.25;
+
+      for (let i = 0; i < 4; i++) {
+        const y = firstLineY + i * lineSpacing;
+        ctx.beginPath();
+        ctx.moveTo(lineStartX, y);
+        ctx.lineTo(lineEndX, y);
+        ctx.stroke();
+      }
+
+      // 5. 绘制 "日" 字（品牌标识）
+      ctx.fillStyle = '#3b82f6';
+      const fontSize = size * 0.25;
+      ctx.font = `700 ${fontSize}px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('日', size / 2, size / 2 - size * 0.05);
+    }
+
+    /**
+     * 绘制圆角矩形路径
+     */
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    /**
+     * 下载所有图标
+     */
+    function downloadAll() {
+      const canvases = document.querySelectorAll('canvas');
+      let downloaded = 0;
+
+      canvases.forEach((canvas, index) => {
+        // 添加延迟避免浏览器阻止多次下载
+        setTimeout(() => {
+          canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = canvas.dataset.name;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            downloaded++;
+            if (downloaded === canvases.length) {
+              alert(`✅ 成功下载 ${downloaded} 个图标！\n\n请将它们复制到项目的 public/ 目录。`);
+            }
+          });
+        }, index * 200); // 每个图标间隔 200ms
+      });
+    }
+  </script>
+</body>
+</html>

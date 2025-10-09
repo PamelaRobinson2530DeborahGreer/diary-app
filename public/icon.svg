@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="2" dy="2" stdDeviation="4" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="512" height="512" fill="url(#bg-gradient)"/>
+
+  <!-- 日记本 -->
+  <g filter="url(#shadow)">
+    <!-- 白色背景 -->
+    <rect x="102" y="128" width="308" height="282" fill="white" rx="16"/>
+
+    <!-- 红色装订线 -->
+    <line x1="148" y1="159" x2="148" y2="379" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- 纸张横线 -->
+    <line x1="179" y1="205" x2="374" y2="205" stroke="#e5e7eb" stroke-width="2"/>
+    <line x1="179" y1="242" x2="374" y2="242" stroke="#e5e7eb" stroke-width="2"/>
+    <line x1="179" y1="279" x2="374" y2="279" stroke="#e5e7eb" stroke-width="2"/>
+    <line x1="179" y1="316" x2="323" y2="316" stroke="#e5e7eb" stroke-width="2"/>
+  </g>
+
+  <!-- "日" 字 -->
+  <text
+    x="256"
+    y="256"
+    dominant-baseline="middle"
+    text-anchor="middle"
+    font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif"
+    font-size="100"
+    font-weight="700"
+    fill="#3b82f6"
+  >日</text>
+</svg>
