@@ -393,6 +393,79 @@ class SecureStorageService {
     await blobStore.removeItem(`photo_${entryId}`);
   }
 
+  async migratePlainEntries(): Promise<number> {
+    if (!this.encryptionKey) {
+      throw new Error('Storage is locked, cannot migrate');
+    }
+
+    const plainEntries: Array<{ key: string; entry: JournalEntry }> = [];
+    await localforage.iterate((value, key) => {
+      if (!key.startsWith('entry_')) return;
+      const record: any = value;
+      if (record && !record.encryptedData && typeof record.html === 'string') {
+        plainEntries.push({ key, entry: record as JournalEntry });
+      }
+    });
+
+    let migrated = 0;
+    for (const { key, entry } of plainEntries) {
+      try {
+        const encryptedData = await cryptoService.encrypt(entry.html || '', this.encryptionKey);
+        const encrypted: EncryptedEntry = {
+          id: entry.id,
+          createdAt: entry.createdAt,
+          updatedAt: entry.updatedAt,
+          encryptedData,
+          mood: entry.mood,
+          hasPhoto: !!entry.photo
+        };
+
+        await localforage.setItem(key, encrypted);
+
+        if (entry.photo) {
+          await this.migratePlainPhoto(entry);
+        }
+
+        migrated++;
+      } catch (error) {
+        console.error('Failed to migrate legacy entry', entry.id, error);
+      }
+    }
+
+    return migrated;
+  }
+
+  private async migratePlainPhoto(entry: JournalEntry): Promise<void> {
+    if (!entry.photo || !this.encryptionKey) return;
+
+    const legacyKey = entry.photo.blobKey;
+    let blob = await blobStore.getItem<Blob>(legacyKey);
+    if (!blob) {
+      blob = await blobStore.getItem<Blob>(`blob_${legacyKey}`);
+    }
+
+    if (!blob) {
+      console.warn('Legacy photo blob not found for entry', entry.id);
+      return;
+    }
+
+    try {
+      const encryptedBlob = await cryptoService.encryptBlob(blob, this.encryptionKey);
+      const encryptedPhoto = {
+        id: entry.photo.id,
+        encryptedBlob,
+        caption: entry.photo.caption,
+        mimeType: blob.type || 'image/jpeg'
+      };
+
+      await blobStore.setItem(`photo_${entry.id}`, encryptedPhoto);
+      await blobStore.removeItem(legacyKey);
+      await blobStore.removeItem(`blob_${legacyKey}`);
+    } catch (error) {
+      console.error('Failed to migrate legacy photo for entry', entry.id, error);
+    }
+  }
+
   // Blob operations (temporary storage for decrypted photos)
   async saveBlob(blob: Blob): Promise<string> {
     const blobKey = crypto.randomUUID();

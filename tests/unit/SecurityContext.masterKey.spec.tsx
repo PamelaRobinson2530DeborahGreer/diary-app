@@ -14,6 +14,7 @@ vi.mock('@/services/secureStorage', () => {
     clearEncryptionKey: vi.fn(),
     isUnlocked: vi.fn().mockReturnValue(false),
     cleanupTempBlobs: vi.fn(),
+    migratePlainEntries: vi.fn().mockResolvedValue(0),
   };
 
   return {
@@ -70,6 +71,7 @@ describe('SecurityContext master key management', () => {
     (webAuthnService.register as ReturnType<typeof vi.fn>).mockReset();
     (webAuthnService.authenticate as ReturnType<typeof vi.fn>).mockReset();
     (webAuthnService.removeCredential as ReturnType<typeof vi.fn>).mockReset();
+    (secureStorage.migratePlainEntries as ReturnType<typeof vi.fn>).mockResolvedValue(0);
   });
 
   afterEach(() => {
@@ -115,6 +117,7 @@ describe('SecurityContext master key management', () => {
     expect(savedSettings.encryptedMasterKey?.byPIN).toBeTruthy();
 
     expect(secureStorage.setEncryptionKey).toHaveBeenCalledTimes(1);
+    expect(secureStorage.migratePlainEntries).toHaveBeenCalled();
   });
 
   it('clears master key when disabling encryption', async () => {
@@ -162,6 +165,7 @@ describe('SecurityContext master key management', () => {
 
     expect(disableResult).toBe(true);
     expect(secureStorage.clearEncryptionKey).toHaveBeenCalled();
+    expect(secureStorage.migratePlainEntries).toHaveBeenCalled();
     expect(webAuthnService.removeCredential).toHaveBeenCalled();
 
     const savedSettingsCalls = (secureStorage.saveSettings as ReturnType<typeof vi.fn>).mock.calls;
@@ -208,6 +212,7 @@ describe('SecurityContext master key management', () => {
     const result = await contextValue!.unlock('000000');
     expect(result).toBe(false);
     expect(secureStorage.setEncryptionKey).not.toHaveBeenCalled();
+    expect(secureStorage.migratePlainEntries).not.toHaveBeenCalled();
   });
 
   it('supports biometric setup and unlock via large blob storage', async () => {
@@ -257,6 +262,7 @@ describe('SecurityContext master key management', () => {
       const unlocked = await contextValue!.unlock(pin);
       expect(unlocked).toBe(true);
     });
+    expect(secureStorage.migratePlainEntries).toHaveBeenCalled();
 
     let setupResult = false;
     await act(async () => {

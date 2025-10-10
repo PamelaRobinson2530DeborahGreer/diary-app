@@ -188,6 +188,17 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       secureStorage.setEncryptionKey(masterCryptoKey);
       masterKeyBytesRef.current = masterKeyBuffer;
 
+      if (settings?.lockEnabled) {
+        try {
+          const migrated = await secureStorage.migratePlainEntries();
+          if (migrated > 0) {
+            console.info(`Migrated ${migrated} legacy entries to encrypted storage.`);
+          }
+        } catch (error) {
+          console.error('Failed to migrate legacy entries after unlock:', error);
+        }
+      }
+
       setIsLocked(false);
       lastActivityRef.current = Date.now();
       return true;
@@ -255,6 +266,15 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
 
       // 6. Cache master key bytes
       masterKeyBytesRef.current = masterKeyBuffer;
+
+      try {
+        const migrated = await secureStorage.migratePlainEntries();
+        if (migrated > 0) {
+          console.info(`Migrated ${migrated} legacy entries to encrypted storage.`);
+        }
+      } catch (error) {
+        console.error('Failed to migrate legacy entries during setup:', error);
+      }
 
       setIsEncryptionEnabled(true);
       setRequiresSetup(false);

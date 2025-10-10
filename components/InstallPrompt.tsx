@@ -18,12 +18,21 @@ export function InstallPrompt() {
     if (typeof window === 'undefined') return;
 
     // 检查是否已安装
-    const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
-    if (isInstalled) return;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const installFlag = localStorage.getItem('journal-install-prompt-installed');
+    if (isStandalone || installFlag === '1') {
+      return;
+    }
 
     // 检查是否已经拒绝过安装提示
-    const isDismissed = localStorage.getItem('journal-install-prompt-dismissed');
-    if (isDismissed) return;
+    const dismissedUntil = localStorage.getItem('journal-install-prompt-dismissed');
+    if (dismissedUntil) {
+      const expiry = new Date(dismissedUntil);
+      if (!Number.isNaN(expiry.getTime()) && expiry.getTime() > Date.now()) {
+        return;
+      }
+      localStorage.removeItem('journal-install-prompt-dismissed');
+    }
 
     // 监听 beforeinstallprompt 事件
     const handler = (e: Event) => {
@@ -60,6 +69,7 @@ export function InstallPrompt() {
 
     if (outcome === 'accepted') {
       console.log('[InstallPrompt] PWA installed successfully');
+      localStorage.setItem('journal-install-prompt-installed', '1');
     }
   };
 

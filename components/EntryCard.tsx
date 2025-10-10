@@ -13,33 +13,43 @@ interface EntryCardProps {
 }
 
 export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) {
-  // Extract title from HTML (first heading or first line)
-  const getTitle = (html: string): string => {
-    // Try to extract H1-H6 tag content
+  const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+
+  const extractPlainText = (html: string): string => 
+    normalize(html.replace(/<[^>]*>/g, ' '));
+
+  const resolveTitleText = (html: string): string => {
     const headingMatch = html.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i);
     if (headingMatch) {
-      const title = headingMatch[1].replace(/<[^>]*>/g, '').trim();
-      if (title) return title;
+      const heading = normalize(headingMatch[1].replace(/<[^>]*>/g, ' '));
+      if (heading) {
+        return heading;
+      }
     }
 
-    // Otherwise use first line
-    const text = html.replace(/<[^>]*>/g, '').trim();
-    if (!text) return '无标题';
+    const plain = extractPlainText(html);
+    if (!plain) return '';
 
-    const firstLine = text.split('\n')[0].trim();
-    return firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '');
+    const firstSentence = plain.split(/[\.\!\?\n]/).find(part => normalize(part).length > 0);
+    return firstSentence ? normalize(firstSentence) : plain;
   };
 
-  // Extract snippet (excluding title)
+  const rawTitle = resolveTitleText(entry.html || '');
+  const displayTitle = rawTitle
+    ? rawTitle.length > 30 ? `${rawTitle.slice(0, 30)}…` : rawTitle
+    : '未命名日记';
+
   const getSnippet = (html: string): string => {
-    const text = html
-      .replace(/<h[1-6][^>]*>.*?<\/h[1-6]>/gi, '') // Remove headings
-      .replace(/<[^>]*>/g, '')                     // Remove all tags
-      .trim();
+    const plain = extractPlainText(html);
+    if (!plain) return '';
 
-    if (!text) return '';
+    let remaining = plain;
+    if (rawTitle && plain.startsWith(rawTitle)) {
+      remaining = plain.slice(rawTitle.length).trim();
+    }
 
-    return text.slice(0, 80) + (text.length > 80 ? '...' : '');
+    if (!remaining) return '';
+    return remaining.length > 80 ? `${remaining.slice(0, 80)}…` : remaining;
   };
 
   const formatDate = (dateStr: string) => {
@@ -52,7 +62,7 @@ export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) 
     });
   };
 
-  const title = getTitle(entry.html);
+  const title = displayTitle;
   const snippet = getSnippet(entry.html);
 
   return (
