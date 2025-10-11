@@ -46,10 +46,20 @@ export function InstallPrompt() {
       }, 3000); // 3秒后显示
     };
 
+    // 监听 appinstalled 事件,标记 PWA 已安装
+    const handleAppInstalled = () => {
+      console.log('[InstallPrompt] PWA has been installed');
+      localStorage.setItem('journal-install-prompt-installed', '1');
+      setShowPrompt(false);
+      setDeferredPrompt(null);
+    };
+
     window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 

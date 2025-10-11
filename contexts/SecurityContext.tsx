@@ -147,7 +147,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
 
   const unlock = useCallback(async (pin: string): Promise<boolean> => {
     if (!settings?.salt || !settings?.pinHash) {
-      console.error('PIN 未配置');
+      console.error('[SecurityContext] PIN 未配置');
       return false;
     }
 
@@ -155,20 +155,33 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       const salt = new Uint8Array(settings.salt.split(',').map(Number));
 
       const isValid = await cryptoService.verifyPIN(pin, salt, settings.pinHash);
-      if (!isValid) return false;
+      if (!isValid) {
+        console.error('[SecurityContext] PIN 验证失败');
+        return false;
+      }
 
+      console.log('[SecurityContext] PIN 验证成功,开始派生密钥...');
       const pinKey = await cryptoService.deriveKey(pin, salt as BufferSource);
 
       let masterKeyBytes: Uint8Array;
       const encryptedString = settings.encryptedMasterKey?.byPIN;
 
       if (encryptedString) {
+        console.log('[SecurityContext] 检测到已存储的主密钥,开始解密...');
         const encryptedData = safeParseEncryptedData(encryptedString);
         if (!encryptedData) {
+          console.error('[SecurityContext] 存储的主密钥格式无效');
           throw new Error('存储的主密钥无效');
         }
-        masterKeyBytes = await cryptoService.decryptMasterKey(encryptedData, pinKey);
+        try {
+          masterKeyBytes = await cryptoService.decryptMasterKey(encryptedData, pinKey);
+          console.log('[SecurityContext] 主密钥解密成功');
+        } catch (decryptError) {
+          console.error('[SecurityContext] 主密钥解密失败:', decryptError);
+          throw new Error('主密钥解密失败,请检查 PIN 是否正确');
+        }
       } else {
+        console.log('[SecurityContext] 未找到存储的主密钥,生成新的主密钥...');
         masterKeyBytes = cryptoService.generateMasterKey();
         const encrypted = await cryptoService.encryptMasterKey(masterKeyBytes, pinKey);
         const updatedSettings: Settings = {
@@ -180,6 +193,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         };
         await secureStorage.saveSettings(updatedSettings);
         setSettings(updatedSettings);
+        console.log('[SecurityContext] 新主密钥已保存');
       }
 
       const masterCryptoKey = await cryptoService.importMasterKey(masterKeyBytes);
@@ -188,22 +202,24 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       secureStorage.setEncryptionKey(masterCryptoKey);
       masterKeyBytesRef.current = masterKeyBuffer;
 
+      console.log('[SecurityContext] 主密钥已导入,开始迁移旧数据...');
       if (settings?.lockEnabled) {
         try {
           const migrated = await secureStorage.migratePlainEntries();
           if (migrated > 0) {
-            console.info(`Migrated ${migrated} legacy entries to encrypted storage.`);
+            console.info(`[SecurityContext] 迁移了 ${migrated} 条旧日记到加密存储`);
           }
         } catch (error) {
-          console.error('Failed to migrate legacy entries after unlock:', error);
+          console.error('[SecurityContext] 迁移旧数据失败:', error);
         }
       }
 
       setIsLocked(false);
       lastActivityRef.current = Date.now();
+      console.log('[SecurityContext] 解锁成功');
       return true;
     } catch (error) {
-      console.error('Unlock error:', error);
+      console.error('[SecurityContext] 解锁失败:', error);
       return false;
     }
   }, [settings]);

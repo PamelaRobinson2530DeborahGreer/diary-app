@@ -19,6 +19,7 @@ export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) 
     normalize(html.replace(/<[^>]*>/g, ' '));
 
   const resolveTitleText = (html: string): string => {
+    // 1. 优先提取标题标签
     const headingMatch = html.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i);
     if (headingMatch) {
       const heading = normalize(headingMatch[1].replace(/<[^>]*>/g, ' '));
@@ -27,29 +28,55 @@ export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) 
       }
     }
 
+    // 2. 提取纯文本
     const plain = extractPlainText(html);
     if (!plain) return '';
 
-    const firstSentence = plain.split(/[\.\!\?\n]/).find(part => normalize(part).length > 0);
-    return firstSentence ? normalize(firstSentence) : plain;
+    // 3. 尝试提取第一句话 (以句号、问号、感叹号或换行符分隔)
+    const sentences = plain.split(/[。\.!\?\n]/).filter(s => normalize(s).length > 0);
+    if (sentences.length > 0 && sentences[0].length <= 50) {
+      return normalize(sentences[0]);
+    }
+
+    // 4. 如果第一句话太长,提取前 30 个字符作为标题
+    return plain.slice(0, 30);
   };
 
   const rawTitle = resolveTitleText(entry.html || '');
   const displayTitle = rawTitle
-    ? rawTitle.length > 30 ? `${rawTitle.slice(0, 30)}…` : rawTitle
+    ? rawTitle.length > 40 ? `${rawTitle.slice(0, 40)}…` : rawTitle
     : '未命名日记';
 
   const getSnippet = (html: string): string => {
     const plain = extractPlainText(html);
     if (!plain) return '';
 
+    // 移除标题部分,避免重复显示
     let remaining = plain;
-    if (rawTitle && plain.startsWith(rawTitle)) {
-      remaining = plain.slice(rawTitle.length).trim();
+    if (rawTitle) {
+      // 尝试从开头移除标题文本
+      if (plain.startsWith(rawTitle)) {
+        remaining = plain.slice(rawTitle.length).trim();
+      } else {
+        // 标题可能被截断了,尝试移除开头相似的部分
+        const titleWords = rawTitle.split(/\s+/);
+        if (titleWords.length > 0) {
+          const firstWord = titleWords[0];
+          const firstWordIndex = plain.indexOf(firstWord);
+          if (firstWordIndex === 0) {
+            // 找到第一个句子结束符后的内容
+            const afterFirstSentence = plain.match(/[。\.!\?\n](.+)/);
+            if (afterFirstSentence) {
+              remaining = afterFirstSentence[1].trim();
+            }
+          }
+        }
+      }
     }
 
     if (!remaining) return '';
-    return remaining.length > 80 ? `${remaining.slice(0, 80)}…` : remaining;
+    // 显示摘要,限制在 100 个字符以内
+    return remaining.length > 100 ? `${remaining.slice(0, 100)}…` : remaining;
   };
 
   const formatDate = (dateStr: string) => {
