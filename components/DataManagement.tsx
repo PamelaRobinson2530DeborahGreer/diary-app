@@ -7,13 +7,20 @@ import { exportService } from '@/services/exportService';
 import { importService, type ConflictStrategy, type ImportResult } from '@/services/importService';
 import { secureStorage } from '@/services/secureStorage';
 
+interface ImportPreview {
+  success: boolean;
+  entryCount: number;
+  metadata?: unknown;
+  errors: string[];
+}
+
 export function DataManagement() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<ImportResult | null>(null);
+  const [previewData, setPreviewData] = useState<ImportPreview | null>(null);
   const [conflictStrategy, setConflictStrategy] = useState<ConflictStrategy>('skip');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
