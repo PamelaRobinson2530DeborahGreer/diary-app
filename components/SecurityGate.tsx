@@ -12,8 +12,10 @@ export function SecurityGate({ children }: { children: React.ReactNode }) {
 
   // Expose context to LockScreen via window (temporary bridge)
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__securityContext = context;
     return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).__securityContext;
     };
   }, [context]);
@@ -34,7 +36,7 @@ export function SecurityGate({ children }: { children: React.ReactNode }) {
   if (isLocked || requiresSetup) {
     return (
       <LockScreen
-        onUnlock={async (key) => {
+        onUnlock={async () => {
           // The key is already set in the context by unlock/setupPIN
           // This is just for UI flow completion
           console.log('Unlock successful');

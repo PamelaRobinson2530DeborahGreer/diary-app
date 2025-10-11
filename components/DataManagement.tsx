@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Download, Upload, FileJson, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, FileJson, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { exportService } from '@/services/exportService';
 import { importService, type ConflictStrategy, type ImportResult } from '@/services/importService';
 import { secureStorage } from '@/services/secureStorage';
@@ -13,7 +13,7 @@ export function DataManagement() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<ImportResult | null>(null);
   const [conflictStrategy, setConflictStrategy] = useState<ConflictStrategy>('skip');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,7 +57,7 @@ export function DataManagement() {
       const preview = await importService.previewImport(file);
       setPreviewData(preview);
       setShowImportDialog(true);
-    } catch (error) {
+    } catch {
       alert('读取文件失败，请确保文件格式正确');
       setSelectedFile(null);
     }
