@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { JournalEntry } from '@/models/entry';
 import { storage } from '@/services/storage';
 import { secureStorage } from '@/services/secureStorage';
-import { searchService } from '@/services/search';
 
 export function useEntries() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -50,10 +49,6 @@ export function useEntries() {
       const storageService = getStorage();
       const loaded = await storageService.listEntries();
       setEntries(loaded);
-
-      // Only build search index for decrypted entries
-      const entriesWithContent = loaded.filter(e => e.html && e.html.length > 0);
-      searchService.buildIndex(entriesWithContent);
       setError(null);
     } catch (err) {
       setError('Failed to load entries');
@@ -71,10 +66,6 @@ export function useEntries() {
       if (entry) {
         // Update the entry in the list
         setEntries(prev => prev.map(e => e.id === id ? entry : e));
-        // Update search index if content is available
-        if (entry.html && entry.html.length > 0) {
-          searchService.addToIndex(entry);
-        }
       }
       return entry;
     } catch (err) {
@@ -90,9 +81,6 @@ export function useEntries() {
       const entry = await storageService.createEntry(partial || {});
       const updated = [entry, ...entries];
       setEntries(updated);
-      if (entry.html) {
-        searchService.addToIndex(entry);
-      }
       return entry;
     } catch (err) {
       console.error('Create entry error:', err);
@@ -107,9 +95,6 @@ export function useEntries() {
       const updated = await storageService.updateEntry(entry);
       const newEntries = entries.map(e => e.id === updated.id ? updated : e);
       setEntries(newEntries);
-      if (updated.html) {
-        searchService.updateInIndex(updated);
-      }
       return updated;
     } catch (err) {
       console.error('Update entry error:', err);
@@ -124,19 +109,12 @@ export function useEntries() {
       await storageService.removeEntry(id);
       const filtered = entries.filter(e => e.id !== id);
       setEntries(filtered);
-      searchService.removeFromIndex(id);
     } catch (err) {
       console.error('Delete entry error:', err);
       throw err;
     }
   }, [entries, getStorage]);
 
-  // Search entries
-  const searchEntries = useCallback((query: string, mood?: string) => {
-    // For encrypted storage, only search entries that are already decrypted
-    const searchableEntries = entries.filter(e => e.html && e.html.length > 0);
-    return searchService.search(searchableEntries, query, mood);
-  }, [entries]);
 
   // Load on mount and when encryption status changes
   useEffect(() => {
@@ -167,7 +145,6 @@ export function useEntries() {
     createEntry,
     updateEntry,
     deleteEntry,
-    searchEntries,
     loadEntry,
     saveBlob,
     getBlob,
