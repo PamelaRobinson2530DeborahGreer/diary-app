@@ -145,7 +145,8 @@ export function useEntries() {
     if (shouldLoad) {
       loadEntries();
     }
-  }, [loadEntries, isEncrypted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEncrypted]);
 
   // Clean up temporary blobs periodically
   useEffect(() => {
