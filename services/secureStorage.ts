@@ -110,7 +110,10 @@ class SecureStorageService {
     // First, get all encrypted entries
     await localforage.iterate((value, key) => {
       if (key.startsWith('entry_')) {
-        encryptedEntries.push(value as EncryptedEntry);
+        // Validate entry structure before adding
+        if (value && typeof value === 'object') {
+          encryptedEntries.push(value as EncryptedEntry);
+        }
       }
     });
 
@@ -145,6 +148,20 @@ class SecureStorageService {
       }
 
       try {
+        // Validate encrypted data structure before attempting decrypt
+        if (!encrypted.encryptedData ||
+            !encrypted.encryptedData.ciphertext ||
+            !encrypted.encryptedData.iv) {
+          console.error('Invalid encrypted data structure:', encrypted.id);
+          throw new Error('Invalid encrypted data structure');
+        }
+
+        // Validate encryption key is available
+        if (!this.encryptionKey) {
+          console.error('No encryption key available for decryption');
+          throw new Error('No encryption key available');
+        }
+
         const decryptedHtml = await cryptoService.decrypt(
           encrypted.encryptedData,
           this.encryptionKey
