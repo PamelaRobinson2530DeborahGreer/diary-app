@@ -2,11 +2,25 @@
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
-import { EntryEditor } from '@/features/journal/EntryEditor';
+import dynamic from 'next/dynamic';
 import { useEntries } from '@/features/journal/useEntries';
 import { JournalEntry } from '@/models/entry';
 import { ArrowLeft, Trash2, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+
+// 动态导入编辑器,减少初始 bundle 大小
+const EntryEditor = dynamic(
+  () => import('@/features/journal/EntryEditor').then(mod => ({ default: mod.EntryEditor })),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">加载编辑器...</span>
+      </div>
+    ),
+    ssr: false // 编辑器不需要服务端渲染
+  }
+);
 
 export default function EntryPage() {
   const router = useRouter();
