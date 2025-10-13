@@ -93,6 +93,9 @@ class SearchService {
    * HTML 转纯文本
    */
   private htmlToPlainText(html: string): string {
+    // 防止 undefined 或 null
+    if (!html) return '';
+
     // 创建临时 DOM 元素
     if (typeof document !== 'undefined') {
       const temp = document.createElement('div');
@@ -108,13 +111,17 @@ class SearchService {
    * 高亮搜索关键词（用于 UI 展示）
    */
   highlightText(text: string, query: string): string {
-    if (!query.trim()) return text;
+    // 防止 undefined 或 null
+    if (!text) return '';
+    if (!query || !query.trim()) return text;
 
     const regex = new RegExp(`(${this.escapeRegex(query)})`, 'gi');
     return text.replace(regex, '<mark>$1</mark>');
   }
 
   private escapeRegex(str: string): string {
+    // 防止 undefined 或 null
+    if (!str) return '';
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
