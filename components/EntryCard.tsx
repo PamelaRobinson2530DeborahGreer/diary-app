@@ -13,12 +13,19 @@ interface EntryCardProps {
 }
 
 export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) {
-  const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+  const normalize = (value: string) => {
+    if (!value) return '';
+    return value.replace(/\s+/g, ' ').trim();
+  };
 
-  const extractPlainText = (html: string): string => 
-    normalize(html.replace(/<[^>]*>/g, ' '));
+  const extractPlainText = (html: string): string => {
+    if (!html) return '';
+    return normalize(html.replace(/<[^>]*>/g, ' '));
+  };
 
   const resolveTitleText = (html: string): string => {
+    if (!html) return '';
+
     // 1. 优先提取标题标签
     const headingMatch = html.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i);
     if (headingMatch) {
