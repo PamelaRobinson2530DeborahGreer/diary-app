@@ -238,8 +238,10 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setupPIN = useCallback(async (pin: string) => {
+    console.log('[SecurityContext] Starting PIN setup...');
     try {
       // 1. Generate salt and derive PIN key
+      console.log('[SecurityContext] Step 1: Generating salt and deriving PIN key');
       const salt = cryptoService.generateSalt();
       const pinKey = await cryptoService.deriveKey(pin, salt as BufferSource);
       const hash = await cryptoService.hashPIN(pin, salt);
@@ -247,19 +249,27 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       let masterKey = masterKeyBytesRef.current;
 
       if (!masterKey && settings?.encryptedMasterKey?.byPIN) {
+        console.log('[SecurityContext] Step 2: Decrypting existing master key');
         const legacyEncrypted = safeParseEncryptedData(settings.encryptedMasterKey.byPIN);
         if (legacyEncrypted) {
-          masterKey = await cryptoService.decryptMasterKey(legacyEncrypted, pinKey);
+          try {
+            masterKey = await cryptoService.decryptMasterKey(legacyEncrypted, pinKey);
+          } catch (decryptError) {
+            console.error('[SecurityContext] Failed to decrypt existing master key:', decryptError);
+          }
         }
       }
 
       if (!masterKey) {
+        console.log('[SecurityContext] Step 3: Generating new master key');
         masterKey = cryptoService.generateMasterKey();
       }
 
+      console.log('[SecurityContext] Step 4: Encrypting master key with PIN');
       const encryptedByPIN = await cryptoService.encryptMasterKey(masterKey, pinKey);
 
       // 4. Save to settings
+      console.log('[SecurityContext] Step 5: Saving settings');
       const newSettings: Settings = {
         ...settings,
         theme: settings?.theme || 'system',
@@ -275,6 +285,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       setSettings(newSettings);
 
       // 5. Import master key and set in services
+      console.log('[SecurityContext] Step 6: Importing master key');
       const masterCryptoKey = await cryptoService.importMasterKey(masterKey);
       const masterKeyBuffer = new Uint8Array(masterKey);
       cryptoService.setCurrentKey(masterCryptoKey, masterKeyBuffer);
@@ -282,22 +293,32 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
 
       // 6. Cache master key bytes
       masterKeyBytesRef.current = masterKeyBuffer;
+      console.log('[SecurityContext] Master key cached successfully');
 
+      // 7. Migrate plain entries
+      console.log('[SecurityContext] Step 7: Migrating plain entries');
       try {
         const migrated = await secureStorage.migratePlainEntries();
         if (migrated > 0) {
-          console.info(`Migrated ${migrated} legacy entries to encrypted storage.`);
+          console.info(`[SecurityContext] Migrated ${migrated} legacy entries to encrypted storage`);
+        } else {
+          console.log('[SecurityContext] No plain entries to migrate');
         }
-      } catch (error) {
-        console.error('Failed to migrate legacy entries during setup:', error);
+      } catch (migrateError) {
+        console.error('[SecurityContext] Failed to migrate legacy entries:', migrateError);
+        // Don't throw - migration failure shouldn't stop setup
       }
 
+      // 8. Update state
+      console.log('[SecurityContext] Step 8: Updating security state');
       setIsEncryptionEnabled(true);
       setRequiresSetup(false);
       setIsLocked(false);
       lastActivityRef.current = Date.now();
+
+      console.log('[SecurityContext] PIN setup completed successfully');
     } catch (error) {
-      console.error('Failed to setup PIN:', error);
+      console.error('[SecurityContext] PIN setup failed:', error);
       throw new Error('设置 PIN 失败');
     }
   }, [settings]);

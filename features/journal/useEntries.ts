@@ -44,19 +44,25 @@ export function useEntries() {
 
   // Load entries from storage
   const loadEntries = useCallback(async () => {
+    console.log('[useEntries] Starting loadEntries...');
+    console.log('[useEntries] isEncrypted:', isEncrypted);
     try {
       setLoading(true);
       const storageService = getStorage();
+      console.log('[useEntries] Using storage service:', storageService.constructor.name);
+      console.log('[useEntries] Calling listEntries...');
       const loaded = await storageService.listEntries();
+      console.log('[useEntries] Loaded', loaded.length, 'entries');
       setEntries(loaded);
       setError(null);
+      console.log('[useEntries] loadEntries completed successfully');
     } catch (err) {
+      console.error('[useEntries] Load entries error:', err);
       setError('Failed to load entries');
-      console.error('Load entries error:', err);
     } finally {
       setLoading(false);
     }
-  }, [getStorage]);
+  }, [getStorage, isEncrypted]);
 
   // Load a single entry on demand (for lazy decryption)
   const loadEntry = useCallback(async (id: string): Promise<JournalEntry | null> => {
@@ -118,10 +124,15 @@ export function useEntries() {
 
   // Load on mount and when encryption status changes
   useEffect(() => {
+    console.log('[useEntries] useEffect triggered - isEncrypted:', isEncrypted);
     // Only load if not locked (handled by SecurityGate)
     const shouldLoad = !isEncrypted || secureStorage.isUnlocked();
+    console.log('[useEntries] shouldLoad:', shouldLoad, '(isUnlocked:', secureStorage.isUnlocked(), ')');
     if (shouldLoad) {
+      console.log('[useEntries] Calling loadEntries from useEffect...');
       loadEntries();
+    } else {
+      console.log('[useEntries] Skipping loadEntries - locked state');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEncrypted]);
