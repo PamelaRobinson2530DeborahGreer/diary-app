@@ -42,7 +42,8 @@ export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) 
     return plain.slice(0, 30);
   };
 
-  const rawTitle = resolveTitleText(entry.html || '');
+  // 优先使用 title 字段,否则从内容中提取
+  const rawTitle = entry.title || resolveTitleText(entry.html || '');
   const displayTitle = rawTitle
     ? rawTitle.length > 40 ? `${rawTitle.slice(0, 40)}…` : rawTitle
     : '未命名日记';

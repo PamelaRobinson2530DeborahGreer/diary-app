@@ -21,6 +21,7 @@ export interface JournalEntry {
   id: EntryID;
   createdAt: string; // ISO
   updatedAt: string; // ISO
+  title?: string;    // optional title (new field)
   html: string;      // sanitized HTML content (encrypted at rest)
   mood?: string;     // emoji or label
   photo?: Photo;     // optional

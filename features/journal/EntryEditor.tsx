@@ -27,6 +27,7 @@ export function EntryEditor({
   saveBlob,
   getBlob
 }: EntryEditorProps) {
+  const [title, setTitle] = useState<string>(entry?.title || '');
   const [mood, setMood] = useState<string | undefined>(entry?.mood);
   const [tags, setTags] = useState<string[]>(entry?.tags || []);
   const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
@@ -38,12 +39,17 @@ export function EntryEditor({
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const entryRef = useRef(entry);
+  const titleRef = useRef(title);
   const moodRef = useRef(mood);
   const tagsRef = useRef(tags);
 
   useEffect(() => {
     entryRef.current = entry;
   }, [entry]);
+
+  useEffect(() => {
+    titleRef.current = title;
+  }, [title]);
 
   useEffect(() => {
     moodRef.current = mood;
@@ -108,6 +114,7 @@ export function EntryEditor({
       try {
         const savedEntry = await onSave({
           ...currentEntry,
+          title: titleRef.current,
           html,
           mood: moodRef.current,
           tags: tagsRef.current
@@ -281,6 +288,20 @@ export function EntryEditor({
       </div>
 
       <div className="flex-1 overflow-auto p-4">
+        {/* Title input */}
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            if (autoSave && entry) {
+              handleAutoSave(editor?.getHTML() || '');
+            }
+          }}
+          placeholder="无标题"
+          className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 mb-4 placeholder:text-muted-foreground/50"
+        />
+
         <EditorContent editor={editor} />
 
         {/* Photo preview or upload placeholder */}

@@ -69,7 +69,11 @@ class SearchService {
     if (query.text && query.text.trim()) {
       const searchText = query.text.toLowerCase().trim();
       results = results.filter(entry => {
-        // HTML 转纯文本
+        // 搜索标题
+        if (entry.title && entry.title.toLowerCase().includes(searchText)) {
+          return true;
+        }
+        // 搜索内容 HTML 转纯文本
         const plainText = this.htmlToPlainText(entry.html).toLowerCase();
         return plainText.includes(searchText);
       });
