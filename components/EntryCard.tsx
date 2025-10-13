@@ -111,23 +111,13 @@ export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) 
         )}
       </div>
 
-      {/* Title (prominent) */}
-      <h3 className="font-semibold text-lg mb-1 line-clamp-1">
+      {/* Title (prominent) - 只显示标题，不显示内容预览 */}
+      <h3 className="font-semibold text-lg mb-1 line-clamp-2">
         <HighlightedText
           text={title}
           highlight={searchQuery}
         />
       </h3>
-
-      {/* Snippet (secondary) */}
-      {snippet && (
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-          <HighlightedText
-            text={snippet}
-            highlight={searchQuery}
-          />
-        </p>
-      )}
 
       {/* Photo indicator */}
       {entry.photo && (
