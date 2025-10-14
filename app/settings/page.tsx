@@ -5,9 +5,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSecurityContext } from '@/contexts/SecurityContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ArrowLeft, Lock, Shield, AlertCircle, Loader2, Moon, Sun, Monitor } from 'lucide-react';
+import { ArrowLeft, Lock, Shield, AlertCircle, Loader2, Moon, Sun, Monitor, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { DataManagement } from '@/components/DataManagement';
+import { secureStorage } from '@/services/secureStorage';
+import { Settings } from '@/models/entry';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -21,6 +23,22 @@ export default function SettingsPage() {
   const [disablePin, setDisablePin] = useState('');
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Auto-lock settings
+  const [autoLockEnabled, setAutoLockEnabled] = useState(false);
+  const [autoLockTimeout, setAutoLockTimeout] = useState(5); // Default 5 minutes
+  const [settings, setSettings] = useState<Settings | null>(null);
+
+  // Load settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      const saved = await secureStorage.getSettings();
+      setSettings(saved);
+      setAutoLockEnabled(saved.autoLockEnabled || false);
+      setAutoLockTimeout(saved.autoLockTimeout || 5);
+    };
+    loadSettings();
+  }, []);
 
   // Reset error when dialogs close
   useEffect(() => {
@@ -98,6 +116,34 @@ export default function SettingsPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Handle auto-lock toggle
+  const handleAutoLockToggle = async () => {
+    const newValue = !autoLockEnabled;
+    setAutoLockEnabled(newValue);
+
+    const newSettings: Settings = {
+      ...settings!,
+      autoLockEnabled: newValue,
+      autoLockTimeout: autoLockTimeout
+    };
+
+    await secureStorage.saveSettings(newSettings);
+    setSettings(newSettings);
+  };
+
+  // Handle auto-lock timeout change
+  const handleAutoLockTimeoutChange = async (timeout: number) => {
+    setAutoLockTimeout(timeout);
+
+    const newSettings: Settings = {
+      ...settings!,
+      autoLockTimeout: timeout
+    };
+
+    await secureStorage.saveSettings(newSettings);
+    setSettings(newSettings);
   };
 
   return (
@@ -203,6 +249,62 @@ export default function SettingsPage() {
                 <strong>加密已启用</strong> - 你的日记内容已被加密保护
               </p>
             </div>
+          )}
+
+          {/* Auto-lock Settings - Only show when encryption is enabled */}
+          {isEncryptionEnabled && (
+            <>
+              <div className="h-px bg-border my-2" />
+
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <p className="font-medium">自动锁定</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    无操作一段时间后自动锁定应用
+                  </p>
+                </div>
+                <button
+                  onClick={handleAutoLockToggle}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    autoLockEnabled ? 'bg-primary' : 'bg-secondary'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      autoLockEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Auto-lock timeout selector */}
+              {autoLockEnabled && (
+                <div className="p-3 bg-secondary/50 rounded-lg space-y-3">
+                  <p className="text-sm font-medium">自动锁定时间</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[5, 10, 15, 30].map((minutes) => (
+                      <button
+                        key={minutes}
+                        onClick={() => handleAutoLockTimeoutChange(minutes)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          autoLockTimeout === minutes
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-background hover:bg-secondary'
+                        }`}
+                      >
+                        {minutes}分钟
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    当前设置: {autoLockTimeout} 分钟无操作后自动锁定
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </section>
 

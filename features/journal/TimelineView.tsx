@@ -5,16 +5,18 @@ import React, { useState, useMemo } from 'react';
 import { JournalEntry } from '@/models/entry';
 import { EntryCard } from '@/components/EntryCard';
 import SearchBar from '@/components/SearchBar';
-import { Plus, Loader2, Settings, Archive, Trash2, Home, BarChart3 } from 'lucide-react';
+import { Plus, Loader2, Settings, Archive, Trash2, Home, BarChart3, Lock } from 'lucide-react';
 import { useEntries } from './useEntries';
 import { useRouter } from 'next/navigation';
 import { searchService, SearchQuery } from '@/services/searchService';
+import { useSecurityContext } from '@/contexts/SecurityContext';
 
 type ViewMode = 'active' | 'archived' | 'trash';
 
 export function TimelineView() {
   const router = useRouter();
   const { entries, loading, error } = useEntries();
+  const { isEncryptionEnabled, lock } = useSecurityContext();
   const [searchQuery, setSearchQuery] = useState<SearchQuery>({});
   const [viewMode, setViewMode] = useState<ViewMode>('active');
 
@@ -76,6 +78,17 @@ export function TimelineView() {
             {viewMode === 'trash' && '回收站'}
           </h1>
           <div className="flex items-center gap-2">
+            {/* Lock button - only show when encryption is enabled */}
+            {isEncryptionEnabled && (
+              <button
+                onClick={lock}
+                className="p-2 hover:bg-secondary rounded-lg transition-colors text-primary"
+                aria-label="立即锁定"
+                title="立即锁定应用"
+              >
+                <Lock className="w-5 h-5" />
+              </button>
+            )}
             <button
               onClick={() => router.push('/statistics')}
               className="p-2 hover:bg-secondary rounded-lg transition-colors"

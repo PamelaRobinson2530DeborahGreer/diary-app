@@ -45,4 +45,8 @@ export interface Settings {
 
   webAuthn?: { credId: string } | null;
   biometricStorage?: 'largeBlob';
+
+  // Auto-lock settings
+  autoLockEnabled?: boolean;      // Enable auto-lock feature
+  autoLockTimeout?: number;       // Timeout in minutes (5, 10, 15, 30)
 }

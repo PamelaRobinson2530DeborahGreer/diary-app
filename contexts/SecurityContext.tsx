@@ -36,8 +36,6 @@ function safeParseEncryptedData(raw?: string): EncryptedData | null {
   }
 }
 
-const AUTO_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-
 export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const [isLocked, setIsLocked] = useState(false);
   const [isEncryptionEnabled, setIsEncryptionEnabled] = useState(false);
@@ -51,6 +49,13 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const autoLockTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const masterKeyBytesRef = useRef<Uint8Array | null>(null); // Cache master key bytes for biometric setup
 
+  // Get auto-lock timeout from settings (in milliseconds)
+  const getAutoLockTimeout = () => {
+    if (!settings?.autoLockEnabled) return null;
+    const timeoutMinutes = settings?.autoLockTimeout || 5; // Default 5 minutes
+    return timeoutMinutes * 60 * 1000;
+  };
+
   // Initialize security state
   useEffect(() => {
     initializeSecurity();
@@ -60,27 +65,31 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isEncryptionEnabled || isLocked) return;
 
+    const autoLockTimeout = getAutoLockTimeout();
+    if (!autoLockTimeout) return; // Auto-lock disabled
+
     const checkInactivity = () => {
       const now = Date.now();
       const timeSinceActivity = now - lastActivityRef.current;
 
-      if (timeSinceActivity >= AUTO_LOCK_TIMEOUT) {
+      if (timeSinceActivity >= autoLockTimeout) {
+        logger.log('[SecurityContext] Auto-locking due to inactivity');
         lock();
       } else {
         // Check again after remaining time
-        const remainingTime = AUTO_LOCK_TIMEOUT - timeSinceActivity;
+        const remainingTime = autoLockTimeout - timeSinceActivity;
         autoLockTimerRef.current = setTimeout(checkInactivity, remainingTime);
       }
     };
 
-    autoLockTimerRef.current = setTimeout(checkInactivity, AUTO_LOCK_TIMEOUT);
+    autoLockTimerRef.current = setTimeout(checkInactivity, autoLockTimeout);
 
     return () => {
       if (autoLockTimerRef.current) {
         clearTimeout(autoLockTimerRef.current);
       }
     };
-  }, [isEncryptionEnabled, isLocked]);
+  }, [isEncryptionEnabled, isLocked, settings?.autoLockEnabled, settings?.autoLockTimeout]);
 
   // Track user activity
   useEffect(() => {
