@@ -2,6 +2,7 @@
 import localforage from 'localforage';
 import { JournalEntry, Settings, Photo } from '@/models/entry';
 import { cryptoService, EncryptedData } from './crypto';
+import { logger } from '@/utils/logger';
 
 // Configure localforage
 localforage.config({
@@ -104,13 +105,13 @@ class SecureStorageService {
 
   // Entry operations with encryption
   async listEntries(): Promise<JournalEntry[]> {
-    console.log('[SecureStorage] listEntries called');
-    console.log('[SecureStorage] Encryption key available:', !!this.encryptionKey);
+    logger.log('[SecureStorage] listEntries called');
+    logger.log('[SecureStorage] Encryption key available:', !!this.encryptionKey);
     const entries: JournalEntry[] = [];
     const encryptedEntries: EncryptedEntry[] = [];
 
     // First, get all encrypted entries
-    console.log('[SecureStorage] Iterating through storage...');
+    logger.log('[SecureStorage] Iterating through storage...');
     await localforage.iterate((value, key) => {
       if (key.startsWith('entry_')) {
         // Validate entry structure before adding
@@ -120,7 +121,7 @@ class SecureStorageService {
       }
     });
 
-    console.log('[SecureStorage] Found', encryptedEntries.length, 'entries in storage');
+    logger.log('[SecureStorage] Found', encryptedEntries.length, 'entries in storage');
 
     // Sort by createdAt before decryption (for performance)
     encryptedEntries.sort((a, b) =>
@@ -129,7 +130,7 @@ class SecureStorageService {
 
     // If no encryption key, return minimal data for locked view
     if (!this.encryptionKey) {
-      console.log('[SecureStorage] No encryption key - returning locked view');
+      logger.log('[SecureStorage] No encryption key - returning locked view');
       return encryptedEntries.map(e => ({
         id: e.id,
         createdAt: e.createdAt,
@@ -143,15 +144,15 @@ class SecureStorageService {
     // Decrypt entries (with lazy loading strategy)
     // Only decrypt first 10 for performance
     const decryptLimit = 10;
-    console.log('[SecureStorage] Starting decryption for first', Math.min(encryptedEntries.length, decryptLimit), 'entries');
+    logger.log('[SecureStorage] Starting decryption for first', Math.min(encryptedEntries.length, decryptLimit), 'entries');
     for (let i = 0; i < Math.min(encryptedEntries.length, decryptLimit); i++) {
       const encrypted = encryptedEntries[i];
-      console.log(`[SecureStorage] Processing entry ${i + 1}/${Math.min(encryptedEntries.length, decryptLimit)} - ID:`, encrypted.id);
+      logger.log(`[SecureStorage] Processing entry ${i + 1}/${Math.min(encryptedEntries.length, decryptLimit)} - ID:`, encrypted.id);
 
       // Check cache first
       const cached = this.getCachedEntry(encrypted.id);
       if (cached) {
-        console.log('[SecureStorage] Using cached entry:', encrypted.id);
+        logger.log('[SecureStorage] Using cached entry:', encrypted.id);
         entries.push(cached);
         continue;
       }
@@ -161,22 +162,22 @@ class SecureStorageService {
         if (!encrypted.encryptedData ||
             !encrypted.encryptedData.ciphertext ||
             !encrypted.encryptedData.iv) {
-          console.error('[SecureStorage] Invalid encrypted data structure:', encrypted.id);
+          logger.error('[SecureStorage] Invalid encrypted data structure:', encrypted.id);
           throw new Error('Invalid encrypted data structure');
         }
 
         // Validate encryption key is available
         if (!this.encryptionKey) {
-          console.error('[SecureStorage] No encryption key available for decryption');
+          logger.error('[SecureStorage] No encryption key available for decryption');
           throw new Error('No encryption key available');
         }
 
-        console.log('[SecureStorage] Decrypting entry:', encrypted.id);
+        logger.log('[SecureStorage] Decrypting entry:', encrypted.id);
         const decryptedHtml = await cryptoService.decrypt(
           encrypted.encryptedData,
           this.encryptionKey
         );
-        console.log('[SecureStorage] Successfully decrypted entry:', encrypted.id);
+        logger.log('[SecureStorage] Successfully decrypted entry:', encrypted.id);
 
         const entry: JournalEntry = {
           id: encrypted.id,
@@ -188,7 +189,7 @@ class SecureStorageService {
 
         // Handle photo if exists
         if (encrypted.hasPhoto) {
-          console.log('[SecureStorage] Loading photo for entry:', encrypted.id);
+          logger.log('[SecureStorage] Loading photo for entry:', encrypted.id);
           const photo = await this.getPhotoForEntry(encrypted.id);
           if (photo) {
             entry.photo = photo;
@@ -198,7 +199,7 @@ class SecureStorageService {
         this.cacheEntry(encrypted.id, entry);
         entries.push(entry);
       } catch (error) {
-        console.error(`[SecureStorage] Failed to decrypt entry ${encrypted.id}:`, error);
+        logger.error(`[SecureStorage] Failed to decrypt entry ${encrypted.id}:`, error);
         // Return placeholder for failed decryption
         entries.push({
           id: encrypted.id,
@@ -212,7 +213,7 @@ class SecureStorageService {
 
     // For remaining entries, return placeholder that will be decrypted on demand
     if (encryptedEntries.length > decryptLimit) {
-      console.log('[SecureStorage] Returning placeholders for', encryptedEntries.length - decryptLimit, 'remaining entries');
+      logger.log('[SecureStorage] Returning placeholders for', encryptedEntries.length - decryptLimit, 'remaining entries');
     }
     for (let i = decryptLimit; i < encryptedEntries.length; i++) {
       entries.push({
@@ -224,7 +225,7 @@ class SecureStorageService {
       });
     }
 
-    console.log('[SecureStorage] listEntries completed - returning', entries.length, 'total entries');
+    logger.log('[SecureStorage] listEntries completed - returning', entries.length, 'total entries');
     return entries;
   }
 
