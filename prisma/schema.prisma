@@ -1,0 +1,93 @@
+// Prisma Schema for Cloud Sync
+// Database: PostgreSQL (Vercel Postgres)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+// 用户表
+model User {
+  id                   String    @id @default(uuid())
+  encryptedMasterKey   String    @map("encrypted_master_key") // 加密的主密钥
+  syncSalt             String    @map("sync_salt")            // 同步密码盐值
+  syncPasswordHash     String    @map("sync_password_hash")   // 同步密码哈希
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  devices              Device[]
+  entries              SyncEntry[]
+  syncHistory          SyncHistory[]
+
+  @@map("users")
+}
+
+// 设备表
+model Device {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  deviceName   String    @map("device_name")
+  lastSyncAt   DateTime? @map("last_sync_at")
+  deviceInfo   Json?     @map("device_info")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  // 关联
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries      SyncEntry[]
+  syncHistory  SyncHistory[]
+
+  @@index([userId])
+  @@map("devices")
+}
+
+// 同步条目表
+model SyncEntry {
+  id             String    @id // 使用客户端生成的UUID
+  userId         String    @map("user_id")
+  deviceId       String    @map("device_id")
+  version        Int       @default(1)
+  encryptedData  String    @map("encrypted_data") @db.Text
+  encryptedTitle String?   @map("encrypted_title")
+  mood           String?
+  hasPhoto       Boolean   @default(false) @map("has_photo")
+  deleted        Boolean   @default(false)
+  createdAt      DateTime  @map("created_at")
+  updatedAt      DateTime  @map("updated_at")
+  vectorClock    Json      @map("vector_clock") // 向量时钟，用于冲突检测
+
+  // 关联
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device         Device    @relation(fields: [deviceId], references: [id])
+
+  @@unique([id, version])
+  @@index([userId])
+  @@index([updatedAt])
+  @@map("sync_entries")
+}
+
+// 同步历史表
+model SyncHistory {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  deviceId       String    @map("device_id")
+  action         String    // 'upload' | 'download' | 'conflict'
+  entriesCount   Int       @default(0) @map("entries_count")
+  conflictsCount Int       @default(0) @map("conflicts_count")
+  timestamp      DateTime  @default(now())
+  status         String    // 'success' | 'failed'
+  error          String?
+
+  // 关联
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device         Device    @relation(fields: [deviceId], references: [id])
+
+  @@index([userId])
+  @@index([timestamp])
+  @@map("sync_history")
+}

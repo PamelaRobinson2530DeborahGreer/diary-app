@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/chrome-devtools-mcp",
+      "args": ["--isolated"]
+    }
+  }
+}
