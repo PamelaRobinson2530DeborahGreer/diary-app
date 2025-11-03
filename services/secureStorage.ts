@@ -280,14 +280,20 @@ class SecureStorageService {
   }
 
   async createEntry(partial: Partial<JournalEntry>): Promise<JournalEntry> {
-    const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    const id = partial.id ?? crypto.randomUUID();
+    const createdAt = partial.createdAt ?? now;
+    const updatedAt = partial.updatedAt ?? partial.createdAt ?? now;
+
     const entry: JournalEntry = {
       id,
-      createdAt: now,
-      updatedAt: now,
+      createdAt,
+      updatedAt,
       html: '',
-      ...partial
+      ...partial,
+      id,
+      createdAt,
+      updatedAt
     };
 
     // If encryption is enabled, encrypt before saving
@@ -319,10 +325,15 @@ class SecureStorageService {
     return entry;
   }
 
-  async updateEntry(entry: JournalEntry): Promise<JournalEntry> {
+  async updateEntry(
+    entry: JournalEntry,
+    options: { preserveUpdatedAt?: boolean } = {}
+  ): Promise<JournalEntry> {
+    const updatedAt = options.preserveUpdatedAt ? entry.updatedAt : new Date().toISOString();
+
     const updated = {
       ...entry,
-      updatedAt: new Date().toISOString()
+      updatedAt
     };
 
     if (this.encryptionKey) {

@@ -194,6 +194,8 @@ M7 为 Journal App 添加了完整的数据导入导出功能，让用户能够�
 // 主要功能
 - exportToJSON(): 导出为 JSON
 - exportToMarkdown(): 导出为 Markdown
+- exportToPDF(): 导出为 PDF
+- buildExportData(): 汇总元数据/标签
 - filterEntries(): 按条件筛选
 - downloadFile(): 触发文件下载
 ```
@@ -202,18 +204,23 @@ M7 为 Journal App 添加了完整的数据导入导出功能，让用户能够�
 ```typescript
 // 主要功能
 - importFromJSON(): 从 JSON 导入
+- importTags(): 处理标签导入/冲突
 - validateExportData(): 验证数据格式
 - previewImport(): 预览导入数据
-- resolveConflicts(): 处理数据冲突
 ```
 
 ### 数据格式版本
 
-**当前版本**: 1.0
+**当前版本**: 1.1
 
 **兼容性**: 支持所有 1.x 版本的导出文件
 
 **升级计划**: 未来版本会向后兼容
+
+**结构更新**:
+- `metadata`: 新增 `tagCount` 字段，记录导出标签数量
+- `entries`: 仅保留筛选后的日记，并在未勾选“保留照片”时剔除 `photo`
+- `tags`: 增量导出与日记关联的标签定义，导入时自动去重
 
 ---
 
@@ -271,10 +278,9 @@ M7 为 Journal App 添加了完整的数据导入导出功能，让用户能够�
 
 ### 场景 3: 数据分享
 
-1. 导出为 Markdown
-2. 用 Markdown 编辑器打开
-3. 编辑或打印
-4. 分享给他人
+1. 导出为 PDF（可直接打印或分享）
+2. 如需编辑内容，可同时导出 Markdown
+3. 将 PDF 分享给他人或保存到网盘
 
 ---
 
@@ -298,8 +304,9 @@ app/settings/
 
 ```typescript
 // 导出
-exportService.export(entries, 'json', options)
-exportService.export(entries, 'markdown', options)
+exportService.export(entries, tags, 'json', options)
+exportService.export(entries, tags, 'markdown', options)
+exportService.export(entries, tags, 'pdf', options)
 
 // 导入
 importService.import(file, { conflictStrategy: 'skip' })
@@ -316,7 +323,9 @@ importService.previewImport(file)
 - [x] 集成到设置页面
 - [x] JSON 导出功能
 - [x] Markdown 导出功能
+- [x] PDF 导出功能
 - [x] JSON 导入功能
+- [x] 标签导入与冲突处理
 - [x] 数据验证
 - [x] 冲突处理
 - [x] 错误处理
@@ -329,27 +338,25 @@ importService.previewImport(file)
 
 ### 短期（可选）
 
-1. **导出选项增强**
-   - 按日期范围导出
-   - 按标签筛选导出
-   - 按心情筛选导出
+1. **导出体验**
+   - 支持附带原始图片文件打包
+   - 提供 PDF 模板风格选择（页眉、页脚、字号）
 
-2. **导入优化**
-   - 支持拖拽上传
-   - 批量导入多个文件
-   - 导入进度条
+2. **导入流程**
+   - 支持拖拽上传 / 粘贴导入
+   - 在导入前展示冲突概览与预计耗时
+   - 导入完成后无刷新更新 UI（避免整页刷新）
 
 ### 长期（待规划）
 
-1. **格式支持**
-   - PDF 格式导出
-   - Day One 格式兼容
-   - Notion 格式兼容
+1. **格式扩展**
+   - Day One / Notion / Markdown 知识库双向转换
+   - iCalendar / CSV 等开放格式导出
 
 2. **云同步**
-   - 自动备份到云端
-   - 多设备同步
-   - 增量同步
+   - 自动备份到云端存储
+   - 多设备增量同步与版本对比
+   - 备份策略可视化与异常提醒
 
 ---
 

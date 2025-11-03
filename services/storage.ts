@@ -42,23 +42,31 @@ class StorageService {
   }
 
   async createEntry(partial: Partial<JournalEntry>): Promise<JournalEntry> {
-    const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    const id = partial.id ?? crypto.randomUUID();
+    const createdAt = partial.createdAt ?? now;
+    const updatedAt = partial.updatedAt ?? partial.createdAt ?? now;
     const entry: JournalEntry = {
       id,
-      createdAt: now,
-      updatedAt: now,
+      createdAt,
+      updatedAt,
       html: '',
-      ...partial
+      ...partial,
+      id,
+      createdAt,
+      updatedAt
     };
     await localforage.setItem(`entry_${id}`, entry);
     return entry;
   }
 
-  async updateEntry(entry: JournalEntry): Promise<JournalEntry> {
+  async updateEntry(
+    entry: JournalEntry,
+    options: { preserveUpdatedAt?: boolean } = {}
+  ): Promise<JournalEntry> {
     const updated = {
       ...entry,
-      updatedAt: new Date().toISOString()
+      updatedAt: options.preserveUpdatedAt ? entry.updatedAt : new Date().toISOString()
     };
     await localforage.setItem(`entry_${entry.id}`, updated);
     return updated;

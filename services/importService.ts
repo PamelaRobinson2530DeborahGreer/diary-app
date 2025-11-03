@@ -1,7 +1,8 @@
 // services/importService.ts
-import { JournalEntry } from '@/models/entry';
+import { JournalEntry, Tag } from '@/models/entry';
 import { ExportData } from './exportService';
 import { secureStorage } from './secureStorage';
+import { tagService } from './tagService';
 
 export type ConflictStrategy = 'skip' | 'overwrite' | 'keep-both';
 
@@ -10,6 +11,10 @@ export interface ImportResult {
   imported: number;
   skipped: number;
   conflicts: number;
+  tagsImported: number;
+  tagsSkipped: number;
+  tagConflicts: number;
+  notes: string[];
   errors: string[];
 }
 
@@ -31,6 +36,10 @@ class ImportService {
       imported: 0,
       skipped: 0,
       conflicts: 0,
+      tagsImported: 0,
+      tagsSkipped: 0,
+      tagConflicts: 0,
+      notes: [],
       errors: [],
     };
 
@@ -47,6 +56,9 @@ class ImportService {
         }
       }
 
+      const strategy: ConflictStrategy = options.conflictStrategy || 'skip';
+      const tagIdMap = await this.importTags(data.tags || [], strategy, result);
+
       // 获取现有日记
       const existingEntries = await secureStorage.listEntries();
       const existingIds = new Set(existingEntries.map(e => e.id));
@@ -54,32 +66,36 @@ class ImportService {
       // 导入日记
       for (const entry of data.entries) {
         try {
+          const normalizedEntry = this.prepareEntryForImport(entry, tagIdMap, result);
           const hasConflict = existingIds.has(entry.id);
 
           if (hasConflict) {
             result.conflicts++;
-            const strategy = options.conflictStrategy || 'skip';
-
             if (strategy === 'skip') {
               result.skipped++;
               continue;
             } else if (strategy === 'overwrite') {
-              await secureStorage.updateEntry(entry);
+              await secureStorage.updateEntry(normalizedEntry, { preserveUpdatedAt: true });
               result.imported++;
+              existingIds.add(entry.id);
             } else if (strategy === 'keep-both') {
               // 创建新的 ID
+              const timestamp = Date.now();
               const newEntry = {
-                ...entry,
-                id: `${entry.id}-imported-${Date.now()}`,
-                createdAt: new Date().toISOString(),
+                ...normalizedEntry,
+                id: `${entry.id}-imported-${timestamp}`,
+                createdAt: new Date(timestamp).toISOString(),
+                updatedAt: new Date().toISOString(),
               };
               await secureStorage.createEntry(newEntry);
               result.imported++;
+              existingIds.add(newEntry.id);
             }
           } else {
             // 没有冲突，直接导入
-            await secureStorage.createEntry(entry);
+            await secureStorage.createEntry(normalizedEntry);
             result.imported++;
+            existingIds.add(entry.id);
           }
         } catch (error) {
           result.errors.push(
@@ -88,7 +104,7 @@ class ImportService {
         }
       }
 
-      result.success = result.errors.length === 0 || result.imported > 0;
+      result.success = result.errors.length === 0;
       return result;
     } catch (error) {
       result.errors.push(
@@ -96,6 +112,112 @@ class ImportService {
       );
       return result;
     }
+  }
+
+  private async importTags(
+    tags: Tag[],
+    strategy: ConflictStrategy,
+    result: ImportResult
+  ): Promise<Map<string, string>> {
+    const mapping = new Map<string, string>();
+    if (!tags || tags.length === 0) {
+      return mapping;
+    }
+
+    const existingTags = await tagService.loadTags();
+    const existingMap = new Map(existingTags.map(tag => [tag.id, tag]));
+    const now = new Date().toISOString();
+
+    for (const tag of tags) {
+      if (!tag?.id || !tag.name) {
+        result.errors.push('标签数据缺失 id 或 name 字段');
+        continue;
+      }
+
+      const sanitizedTag: Tag = {
+        ...tag,
+        name: tag.name.trim(),
+        createdAt: tag.createdAt ?? now,
+        updatedAt: tag.updatedAt ?? tag.createdAt ?? now
+      };
+
+      const existing = existingMap.get(sanitizedTag.id);
+      if (existing) {
+        result.tagConflicts++;
+        if (strategy === 'skip') {
+          result.tagsSkipped++;
+          mapping.set(sanitizedTag.id, existing.id);
+          continue;
+        }
+
+        if (strategy === 'overwrite') {
+          await tagService.importTag(sanitizedTag);
+          mapping.set(sanitizedTag.id, sanitizedTag.id);
+          result.tagsImported++;
+          continue;
+        }
+
+        const newId = this.generateImportedId(sanitizedTag.id);
+        const duplicatedTag: Tag = {
+          ...sanitizedTag,
+          id: newId,
+          createdAt: now,
+          updatedAt: now
+        };
+        await tagService.importTag(duplicatedTag);
+        mapping.set(sanitizedTag.id, duplicatedTag.id);
+        result.tagsImported++;
+        result.notes.push(`标签 "${sanitizedTag.name}" 已复制为新标签 (ID: ${duplicatedTag.id})`);
+        continue;
+      }
+
+      await tagService.importTag(sanitizedTag);
+      mapping.set(sanitizedTag.id, sanitizedTag.id);
+      result.tagsImported++;
+      existingMap.set(sanitizedTag.id, sanitizedTag);
+    }
+
+    return mapping;
+  }
+
+  private prepareEntryForImport(
+    entry: JournalEntry,
+    tagIdMap: Map<string, string>,
+    result: ImportResult
+  ): JournalEntry {
+    const mappedTags: string[] | undefined = entry.tags
+      ? entry.tags.map(tagId => tagIdMap.get(tagId) ?? tagId)
+      : undefined;
+
+    const missingTags = entry.tags?.filter(tagId => !tagIdMap.has(tagId)) ?? [];
+    if (missingTags.length > 0) {
+      result.notes.push(
+        `日记 ${entry.id} 引用了 ${missingTags.length} 个未导入的标签: ${missingTags.join(', ')}`
+      );
+    }
+
+    const normalized: JournalEntry = {
+      ...entry,
+      html: entry.html ?? '',
+      tags: mappedTags,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt ?? entry.createdAt,
+      deleted: entry.deleted ?? false,
+    };
+
+    if (entry.photo) {
+      normalized.photo = undefined;
+      result.notes.push(`日记 ${entry.id} 包含照片，导入时未包含原图。`);
+    }
+
+    return normalized;
+  }
+
+  private generateImportedId(base: string): string {
+    const suffix = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    return `${base}-imported-${suffix}`;
   }
 
   /**
@@ -126,6 +248,17 @@ class ImportService {
       });
     }
 
+    if (data.tags !== undefined) {
+      if (!Array.isArray(data.tags)) {
+        errors.push('tags 字段格式不正确');
+      } else {
+        data.tags.forEach((tag: any, index: number) => {
+          const tagErrors = this.validateTag(tag, index);
+          errors.push(...tagErrors);
+        });
+      }
+    }
+
     return errors;
   }
 
@@ -140,14 +273,44 @@ class ImportService {
       errors.push(`${prefix}: 缺少 id 字段`);
     }
 
-    if (!entry.content) {
-      errors.push(`${prefix}: 缺少 content 字段`);
+    if (!entry.html) {
+      errors.push(`${prefix}: 缺少 html 字段`);
+    } else if (typeof entry.html !== 'string') {
+      errors.push(`${prefix}: html 字段格式不正确`);
+    }
+
+    if (entry.tags && !Array.isArray(entry.tags)) {
+      errors.push(`${prefix}: tags 字段格式不正确`);
     }
 
     if (!entry.createdAt) {
       errors.push(`${prefix}: 缺少 createdAt 字段`);
     } else if (isNaN(Date.parse(entry.createdAt))) {
       errors.push(`${prefix}: createdAt 格式不正确`);
+    }
+
+    return errors;
+  }
+
+  private validateTag(tag: any, index: number): string[] {
+    const errors: string[] = [];
+    const prefix = `标签 #${index + 1}`;
+
+    if (!tag) {
+      errors.push(`${prefix}: 数据为空`);
+      return errors;
+    }
+
+    if (!tag.id) {
+      errors.push(`${prefix}: 缺少 id 字段`);
+    }
+
+    if (!tag.name) {
+      errors.push(`${prefix}: 缺少 name 字段`);
+    }
+
+    if (!tag.color) {
+      errors.push(`${prefix}: 缺少 color 字段`);
     }
 
     return errors;
@@ -222,6 +385,7 @@ class ImportService {
   async previewImport(file: File): Promise<{
     success: boolean;
     entryCount: number;
+    tagCount: number;
     metadata?: any;
     errors: string[];
   }> {
@@ -234,6 +398,7 @@ class ImportService {
       return {
         success: validationErrors.length === 0,
         entryCount: data.entries?.length || 0,
+        tagCount: Array.isArray(data.tags) ? data.tags.length : 0,
         metadata: data.metadata,
         errors: validationErrors,
       };
@@ -241,6 +406,7 @@ class ImportService {
       return {
         success: false,
         entryCount: 0,
+        tagCount: 0,
         errors: [
           `预览失败: ${error instanceof Error ? error.message : '未知错误'}`,
         ],

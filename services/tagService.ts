@@ -11,6 +11,13 @@ class TagService {
   private tags: Map<TagID, Tag> = new Map();
   private loaded = false;
 
+  private async persistTag(tag: Tag): Promise<Tag> {
+    await tagStore.setItem(tag.id, tag);
+    this.tags.set(tag.id, tag);
+    this.loaded = true;
+    return tag;
+  }
+
   async loadTags(): Promise<Tag[]> {
     if (this.loaded) {
       return Array.from(this.tags.values());
@@ -43,10 +50,7 @@ class TagService {
       createdAt: now,
       updatedAt: now
     };
-
-    await tagStore.setItem(tag.id, tag);
-    this.tags.set(tag.id, tag);
-    return tag;
+    return this.persistTag(tag);
   }
 
   async updateTag(id: TagID, updates: Partial<Pick<Tag, 'name' | 'color' | 'icon'>>): Promise<Tag | null> {
@@ -59,9 +63,7 @@ class TagService {
       updatedAt: new Date().toISOString()
     };
 
-    await tagStore.setItem(id, updatedTag);
-    this.tags.set(id, updatedTag);
-    return updatedTag;
+    return this.persistTag(updatedTag);
   }
 
   async deleteTag(id: TagID): Promise<boolean> {
@@ -71,6 +73,17 @@ class TagService {
     await tagStore.removeItem(id);
     this.tags.delete(id);
     return true;
+  }
+
+  async importTag(tag: Tag): Promise<Tag> {
+    const normalized: Tag = {
+      ...tag,
+      name: tag.name.trim(),
+      createdAt: tag.createdAt ?? new Date().toISOString(),
+      updatedAt: tag.updatedAt ?? tag.createdAt ?? new Date().toISOString()
+    };
+
+    return this.persistTag(normalized);
   }
 
   async searchTags(query: string): Promise<Tag[]> {
