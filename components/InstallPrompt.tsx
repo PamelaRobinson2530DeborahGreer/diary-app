@@ -1,97 +1,28 @@
 // components/InstallPrompt.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import { Download, X } from 'lucide-react';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+import { useInstallPrompt } from '@/contexts/InstallPromptContext';
 
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
+  const {
+    showPrompt,
+    deferredPrompt,
+    promptInstall,
+    dismissPrompt,
+    installed,
+  } = useInstallPrompt();
 
-  useEffect(() => {
-    // 确保在浏览器环境中运行
-    if (typeof window === 'undefined') return;
+  const handleInstall = useCallback(async () => {
+    await promptInstall();
+  }, [promptInstall]);
 
-    // 检查是否已安装
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const installFlag = localStorage.getItem('journal-install-prompt-installed');
-    if (isStandalone || installFlag === '1') {
-      return;
-    }
+  const handleDismiss = useCallback(() => {
+    dismissPrompt();
+  }, [dismissPrompt]);
 
-    // 检查是否已经拒绝过安装提示
-    const dismissedUntil = localStorage.getItem('journal-install-prompt-dismissed');
-    if (dismissedUntil) {
-      const expiry = new Date(dismissedUntil);
-      if (!Number.isNaN(expiry.getTime()) && expiry.getTime() > Date.now()) {
-        return;
-      }
-      localStorage.removeItem('journal-install-prompt-dismissed');
-    }
-
-    // 监听 beforeinstallprompt 事件
-    const handler = (e: Event) => {
-      e.preventDefault();
-      const promptEvent = e as BeforeInstallPromptEvent;
-      setDeferredPrompt(promptEvent);
-
-      // 延迟显示提示（避免打扰用户）
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 3000); // 3秒后显示
-    };
-
-    // 监听 appinstalled 事件,标记 PWA 已安装
-    const handleAppInstalled = () => {
-      console.log('[InstallPrompt] PWA has been installed');
-      localStorage.setItem('journal-install-prompt-installed', '1');
-      setShowPrompt(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-
-    // 显示安装提示
-    await deferredPrompt.prompt();
-
-    // 等待用户选择
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`[InstallPrompt] User choice: ${outcome}`);
-
-    // 清理状态
-    setDeferredPrompt(null);
-    setShowPrompt(false);
-
-    if (outcome === 'accepted') {
-      console.log('[InstallPrompt] PWA installed successfully');
-      localStorage.setItem('journal-install-prompt-installed', '1');
-    }
-  };
-
-  const handleDismiss = () => {
-    setShowPrompt(false);
-    // 记住用户选择（30天内不再显示）
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 30);
-    localStorage.setItem('journal-install-prompt-dismissed', expiryDate.toISOString());
-  };
-
-  if (!showPrompt || !deferredPrompt) {
+  if (!showPrompt || !deferredPrompt || installed) {
     return null;
   }
 

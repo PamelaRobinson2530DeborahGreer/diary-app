@@ -8,6 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ArrowLeft, Lock, Shield, AlertCircle, Loader2, Moon, Sun, Monitor, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { DataManagement } from '@/components/DataManagement';
+import { InstallCTA } from '@/components/InstallCTA';
 import { secureStorage } from '@/services/secureStorage';
 import { Settings } from '@/models/entry';
 
@@ -161,6 +162,9 @@ export default function SettingsPage() {
 
       {/* Settings Content */}
       <main className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* Install CTA */}
+        <InstallCTA />
+
         {/* Theme Section */}
         <section className="bg-card rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">

@@ -7,6 +7,8 @@ import { SecurityGate } from '@/components/SecurityGate';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { NotificationPermission } from '@/components/NotificationPermission';
+import { ServiceWorkerManager } from '@/components/ServiceWorkerManager';
+import { InstallPromptProvider } from '@/contexts/InstallPromptContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -84,53 +86,19 @@ export default function RootLayout({
           }}
         />
 
-        {/* Service Worker 注册脚本 */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker
-                    .register('/sw.js')
-                    .then((registration) => {
-                      console.log('[App] SW registered:', registration.scope);
-
-                      // 监听更新
-                      registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        console.log('[App] SW update found');
-
-                        newWorker.addEventListener('statechange', () => {
-                          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            console.log('[App] New SW available, reload to update');
-                          }
-                        });
-                      });
-                    })
-                    .catch((error) => {
-                      console.error('[App] SW registration failed:', error);
-                    });
-
-                  // 监听 SW 控制变化
-                  navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    console.log('[App] SW controller changed, reloading...');
-                    window.location.reload();
-                  });
-                });
-              }
-            `,
-          }}
-        />
       </head>
       <body className={inter.className}>
         <ThemeProvider>
-          <SecurityProvider>
-            <SecurityGate>
-              {children}
-            </SecurityGate>
+          <InstallPromptProvider>
+            <SecurityProvider>
+              <SecurityGate>
+                {children}
+              </SecurityGate>
+              <ServiceWorkerManager />
+              <NotificationPermission />
+            </SecurityProvider>
             <InstallPrompt />
-            <NotificationPermission />
-          </SecurityProvider>
+          </InstallPromptProvider>
         </ThemeProvider>
       </body>
     </html>

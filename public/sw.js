@@ -1,17 +1,33 @@
 // Service Worker for Journal App PWA
-// Version: 1.0.0
+// Version: 1.1.0
 
-const CACHE_NAME = 'journal-app-v1';
-const RUNTIME_CACHE = 'journal-runtime-v1';
+const CACHE_NAME = 'journal-app-v2';
+const RUNTIME_CACHE = 'journal-runtime-v2';
 
-// 预缓存的静态资源
+// 预缓存的静态资源（不依赖构建哈希的文件）
 const STATIC_ASSETS = [
   '/',
   '/offline',
   '/manifest.json',
   '/icon.svg',
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/icon-maskable-192.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon.svg',
+  '/apple-splash-iphone5.png',
+  '/apple-splash-iphone6.png',
+  '/apple-splash-iphonex.png',
+  '/apple-splash-iphonexr.png',
+  '/apple-splash-iphonexsmax.png',
+  '/apple-splash-iphone12.png',
+  '/apple-splash-iphone12max.png',
+  '/apple-splash-ipad.png',
+  '/apple-splash-ipadpro10.png',
+  '/apple-splash-ipadpro11.png',
+  '/apple-splash-ipadpro12.png',
+  '/fonts/NotoSansSC-Regular.otf'
 ];
 
 // 安装事件：预缓存关键资源
@@ -64,6 +80,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') {
+    return;
+  }
 
   // 跳过非 GET 请求
   if (request.method !== 'GET') {
