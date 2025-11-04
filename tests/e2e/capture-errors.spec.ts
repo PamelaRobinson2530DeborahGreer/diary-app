@@ -9,8 +9,8 @@ test('捕获客户端错误详情', async () => {
   const page = await context.newPage();
   
   // 捕获所有错误
-  const errors = [];
-  const logs = [];
+  const errors: Array<{ message: string; stack?: string }> = [];
+  const logs: Array<{ type: string; text: string }> = [];
   
   page.on('console', msg => {
     const text = msg.text();

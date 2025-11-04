@@ -4,7 +4,7 @@
 import { cryptoService } from './crypto';
 import { secureStorage } from './secureStorage';
 import { logger } from '@/utils/logger';
-import { JournalEntry } from '@/models/entry';
+import { JournalEntry, SyncResult } from '@/models/entry';
 
 interface SyncSettings {
   userId: string | null;
@@ -13,14 +13,6 @@ interface SyncSettings {
   lastSyncTime: string | null;
   autoSyncEnabled: boolean;
   syncInterval: number; // minutes
-}
-
-interface SyncResult {
-  success: boolean;
-  uploaded: number;
-  downloaded: number;
-  conflicts: number;
-  error?: string;
 }
 
 interface VectorClock {
@@ -42,20 +34,35 @@ class SyncService {
   }
 
   constructor() {
-    // Load settings from localStorage
-    const saved = localStorage.getItem('syncSettings');
+    if (typeof window === 'undefined') {
+      this.settings = {
+        userId: null,
+        deviceId: null,
+        deviceName: 'Unknown Device',
+        lastSyncTime: null,
+        autoSyncEnabled: false,
+        syncInterval: 5
+      };
+      return;
+    }
+
+    const saved = window.localStorage.getItem('syncSettings');
     this.settings = saved ? JSON.parse(saved) : {
       userId: null,
       deviceId: null,
       deviceName: this.getDeviceName(),
       lastSyncTime: null,
       autoSyncEnabled: false,
-      syncInterval: 5 // 5 minutes
+      syncInterval: 5
     };
   }
 
   // Get device name
   private getDeviceName(): string {
+    if (typeof navigator === 'undefined') {
+      return 'Unknown Device';
+    }
+
     const ua = navigator.userAgent;
     let deviceName = 'Unknown Device';
 
@@ -71,6 +78,15 @@ class SyncService {
 
   // Get device info
   private getDeviceInfo() {
+    if (typeof navigator === 'undefined') {
+      return {
+        browser: 'Unknown',
+        os: 'Unknown',
+        userAgent: 'Unknown',
+        language: 'Unknown'
+      };
+    }
+
     return {
       browser: navigator.userAgent,
       os: navigator.platform,
@@ -81,7 +97,8 @@ class SyncService {
 
   // Save settings
   private saveSettings(): void {
-    localStorage.setItem('syncSettings', JSON.stringify(this.settings));
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('syncSettings', JSON.stringify(this.settings));
   }
 
   // Check if sync is set up
@@ -97,7 +114,7 @@ class SyncService {
   /**
    * Setup sync - First time setup
    */
-  async setupSync(syncPassword: string): Promise<void> {
+  async setupSync(syncPassword: string, deviceName?: string): Promise<void> {
     if (this.syncInProgress) {
       throw new Error('Sync already in progress');
     }
@@ -105,6 +122,11 @@ class SyncService {
     try {
       this.syncInProgress = true;
       logger.log('[SyncService] Setting up cloud sync');
+
+      if (deviceName?.trim()) {
+        this.settings.deviceName = deviceName.trim();
+        this.saveSettings();
+      }
 
       // 1. Generate sync salt and hash
       const syncSalt = cryptoService.generateSalt();
@@ -164,7 +186,7 @@ class SyncService {
   /**
    * Login to sync from new device
    */
-  async loginSync(syncPassword: string): Promise<void> {
+  async loginSync(syncPassword: string, deviceName?: string): Promise<void> {
     if (this.syncInProgress) {
       throw new Error('Sync already in progress');
     }
@@ -172,6 +194,11 @@ class SyncService {
     try {
       this.syncInProgress = true;
       logger.log('[SyncService] Logging into cloud sync');
+
+      if (deviceName?.trim()) {
+        this.settings.deviceName = deviceName.trim();
+        this.saveSettings();
+      }
 
       // 1. Hash sync password
       const syncSalt = cryptoService.generateSalt();

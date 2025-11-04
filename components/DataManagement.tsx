@@ -19,7 +19,13 @@ import { tagService } from '@/services/tagService';
 import type { Tag } from '@/models/entry';
 
 const MOOD_OPTIONS = ['😊', '😢', '😡', '😌', '😴', '🤔', '😎', '🥳'];
-const DEFAULT_DATE_RANGE = { start: '', end: '' } as const;
+
+type DateRange = {
+  start: string;
+  end: string;
+};
+
+const DEFAULT_DATE_RANGE: DateRange = { start: '', end: '' };
 
 interface ImportPreview {
   success: boolean;
@@ -48,7 +54,7 @@ export function DataManagement() {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState({ ...DEFAULT_DATE_RANGE });
+  const [dateRange, setDateRange] = useState<DateRange>({ ...DEFAULT_DATE_RANGE });
   const [includePhotos, setIncludePhotos] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

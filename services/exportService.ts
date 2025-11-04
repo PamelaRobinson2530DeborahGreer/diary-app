@@ -504,7 +504,7 @@ class ExportService {
   /**
    * 下载文件
    */
-  downloadFile(content: string | Uint8Array, filename: string, mimeType: string): void {
+  downloadFile(content: BlobPart, filename: string, mimeType: string): void {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -550,7 +550,8 @@ class ExportService {
     }
 
     const binary = await this.exportToPDF(entries, tags, options);
-    this.downloadFile(binary, filename, 'application/pdf');
+    const buffer = binary.buffer.slice(binary.byteOffset, binary.byteOffset + binary.byteLength) as ArrayBuffer;
+    this.downloadFile(buffer, filename, 'application/pdf');
   }
 }
 

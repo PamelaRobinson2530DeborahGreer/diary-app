@@ -286,14 +286,11 @@ class SecureStorageService {
     const updatedAt = partial.updatedAt ?? partial.createdAt ?? now;
 
     const entry: JournalEntry = {
-      id,
-      createdAt,
-      updatedAt,
-      html: '',
       ...partial,
       id,
       createdAt,
-      updatedAt
+      updatedAt,
+      html: partial?.html ?? ''
     };
 
     // If encryption is enabled, encrypt before saving

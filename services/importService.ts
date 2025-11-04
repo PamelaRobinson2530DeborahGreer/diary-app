@@ -357,6 +357,10 @@ class ImportService {
           imported: 0,
           skipped: 0,
           conflicts: 0,
+          tagsImported: 0,
+          tagsSkipped: 0,
+          tagConflicts: 0,
+          notes: [],
           errors: ['只支持 .json 格式的文件'],
         };
       }
@@ -372,6 +376,10 @@ class ImportService {
         imported: 0,
         skipped: 0,
         conflicts: 0,
+        tagsImported: 0,
+        tagsSkipped: 0,
+        tagConflicts: 0,
+        notes: [],
         errors: [
           `导入失败: ${error instanceof Error ? error.message : '未知错误'}`,
         ],

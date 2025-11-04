@@ -49,4 +49,57 @@ export interface Settings {
   // Auto-lock settings
   autoLockEnabled?: boolean;      // Enable auto-lock feature
   autoLockTimeout?: number;       // Timeout in minutes (5, 10, 15, 30)
+
+  // Cloud sync settings
+  cloudSyncEnabled?: boolean;
+  syncUserId?: string;
+  syncDeviceId?: string;
+  lastSyncTime?: string;
+  autoSyncEnabled?: boolean;
+  syncInterval?: number;
+}
+
+export interface VectorClock {
+  [deviceId: string]: number;
+}
+
+export interface SyncEntry {
+  id: string;
+  version: number;
+  encryptedData: string;
+  encryptedTitle?: string;
+  mood?: string;
+  hasPhoto: boolean;
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  vectorClock: VectorClock;
+  deviceId?: string;
+}
+
+export interface SyncDevice {
+  id: string;
+  deviceName: string;
+  lastSyncAt: Date | string | null;
+  deviceInfo?: {
+    browser?: string;
+    os?: string;
+    userAgent?: string;
+  };
+  createdAt: Date | string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  uploaded: number;
+  downloaded: number;
+  conflicts: number;
+  error?: string;
+}
+
+export interface Conflict {
+  entryId: string;
+  localVersion: JournalEntry;
+  remoteVersion: SyncEntry;
+  type: 'content' | 'delete' | 'both';
 }

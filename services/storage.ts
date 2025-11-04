@@ -47,14 +47,11 @@ class StorageService {
     const createdAt = partial.createdAt ?? now;
     const updatedAt = partial.updatedAt ?? partial.createdAt ?? now;
     const entry: JournalEntry = {
-      id,
-      createdAt,
-      updatedAt,
-      html: '',
       ...partial,
       id,
       createdAt,
-      updatedAt
+      updatedAt,
+      html: partial?.html ?? ''
     };
     await localforage.setItem(`entry_${id}`, entry);
     return entry;
