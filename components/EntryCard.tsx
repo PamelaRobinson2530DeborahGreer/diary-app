@@ -55,38 +55,6 @@ export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) 
     ? rawTitle.length > 40 ? `${rawTitle.slice(0, 40)}…` : rawTitle
     : '未命名日记';
 
-  const getSnippet = (html: string): string => {
-    const plain = extractPlainText(html);
-    if (!plain) return '';
-
-    // 移除标题部分,避免重复显示
-    let remaining = plain;
-    if (rawTitle) {
-      // 尝试从开头移除标题文本
-      if (plain.startsWith(rawTitle)) {
-        remaining = plain.slice(rawTitle.length).trim();
-      } else {
-        // 标题可能被截断了,尝试移除开头相似的部分
-        const titleWords = rawTitle.split(/\s+/);
-        if (titleWords.length > 0) {
-          const firstWord = titleWords[0];
-          const firstWordIndex = plain.indexOf(firstWord);
-          if (firstWordIndex === 0) {
-            // 找到第一个句子结束符后的内容
-            const afterFirstSentence = plain.match(/[。\.!\?\n](.+)/);
-            if (afterFirstSentence) {
-              remaining = afterFirstSentence[1].trim();
-            }
-          }
-        }
-      }
-    }
-
-    if (!remaining) return '';
-    // 显示摘要,限制在 100 个字符以内
-    return remaining.length > 100 ? `${remaining.slice(0, 100)}…` : remaining;
-  };
-
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('zh-CN', {
@@ -98,7 +66,6 @@ export function EntryCard({ entry, onClick, searchQuery = '' }: EntryCardProps) 
   };
 
   const title = displayTitle;
-  const snippet = getSnippet(entry.html);
 
   return (
     <div

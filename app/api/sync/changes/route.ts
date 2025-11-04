@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { logger } from '@/utils/logger';
 
 export async function GET(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch entries updated after 'since' time
     // Exclude entries last updated by the current device to avoid circular sync
-    const where: any = {
+    const where: Prisma.SyncEntryWhereInput = {
       userId,
       updatedAt: {
         gt: sinceDate

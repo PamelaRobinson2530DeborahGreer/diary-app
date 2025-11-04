@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { logger } from '@/utils/logger';
 
 export async function POST(request: NextRequest) {
@@ -36,7 +37,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert entries (create or update)
-    const upsertPromises = entries.map((entry: any) =>
+    interface SyncEntryPayload {
+      id: string;
+      version?: number;
+      encryptedData: string;
+      encryptedTitle?: string | null;
+      mood?: string | null;
+      hasPhoto?: boolean;
+      deleted?: boolean;
+      createdAt: string;
+      updatedAt: string;
+      vectorClock?: Prisma.JsonValue;
+    }
+
+    const upsertPromises = entries.map((entry: SyncEntryPayload) =>
       prisma.syncEntry.upsert({
         where: { id: entry.id },
         create: {
@@ -47,11 +61,11 @@ export async function POST(request: NextRequest) {
           encryptedData: entry.encryptedData,
           encryptedTitle: entry.encryptedTitle,
           mood: entry.mood,
-          hasPhoto: entry.hasPhoto || false,
-          deleted: entry.deleted || false,
+          hasPhoto: entry.hasPhoto ?? false,
+          deleted: entry.deleted ?? false,
           createdAt: new Date(entry.createdAt),
           updatedAt: new Date(entry.updatedAt),
-          vectorClock: entry.vectorClock || { [deviceId]: 1 }
+          vectorClock: entry.vectorClock ?? { [deviceId]: 1 }
         },
         update: {
           deviceId,
@@ -59,10 +73,10 @@ export async function POST(request: NextRequest) {
           encryptedData: entry.encryptedData,
           encryptedTitle: entry.encryptedTitle,
           mood: entry.mood,
-          hasPhoto: entry.hasPhoto || false,
-          deleted: entry.deleted || false,
+          hasPhoto: entry.hasPhoto ?? false,
+          deleted: entry.deleted ?? false,
           updatedAt: new Date(entry.updatedAt),
-          vectorClock: entry.vectorClock
+          vectorClock: entry.vectorClock ?? Prisma.JsonNull
         }
       })
     );

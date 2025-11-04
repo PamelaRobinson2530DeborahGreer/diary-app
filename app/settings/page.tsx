@@ -14,7 +14,7 @@ import { Settings } from '@/models/entry';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { isEncryptionEnabled, requiresSetup, setupPIN, disableEncryption } = useSecurityContext();
+  const { isEncryptionEnabled, setupPIN, disableEncryption } = useSecurityContext();
   const { theme, setTheme } = useTheme();
 
   const [showEnableDialog, setShowEnableDialog] = useState(false);
@@ -89,6 +89,7 @@ export default function SettingsPage() {
       setShowEnableDialog(false);
       router.push('/');
     } catch (err) {
+      console.error('[Settings] Enable encryption failed:', err);
       setError('启用加密失败，请重试');
     } finally {
       setIsProcessing(false);
@@ -113,6 +114,7 @@ export default function SettingsPage() {
         setError('PIN 错误，请重试');
       }
     } catch (err) {
+      console.error('[Settings] Disable encryption failed:', err);
       setError('禁用加密失败');
     } finally {
       setIsProcessing(false);

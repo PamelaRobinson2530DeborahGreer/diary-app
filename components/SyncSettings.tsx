@@ -339,7 +339,7 @@ export default function SyncSettings({ onSyncComplete }: SyncSettingsProps) {
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4">
             <h3 className="text-lg font-semibold">Setup Cloud Sync</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Create a sync password to encrypt your master key. You'll need this password to sync from other devices.
+              Create a sync password to encrypt your master key. You&apos;ll need this password to sync from other devices.
             </p>
 
             <form onSubmit={handleSetupSync} className="space-y-4">

@@ -91,7 +91,7 @@ export default function DeviceManager() {
     });
   };
 
-  const getDeviceIcon = (deviceInfo?: { browser?: string; os?: string }) => {
+  const getDeviceIcon = (deviceInfo?: SyncDevice['deviceInfo']) => {
     if (!deviceInfo) return '💻';
 
     const os = deviceInfo.os?.toLowerCase() || '';
@@ -160,7 +160,7 @@ export default function DeviceManager() {
                   <div className="flex items-start gap-3 flex-1">
                     {/* Device Icon */}
                     <div className="text-2xl mt-0.5">
-                      {getDeviceIcon(device.deviceInfo as any)}
+                      {getDeviceIcon(device.deviceInfo)}
                     </div>
 
                     {/* Device Info */}
@@ -178,14 +178,14 @@ export default function DeviceManager() {
                       <div className="mt-1 space-y-0.5 text-sm text-gray-600 dark:text-gray-400">
                         {device.deviceInfo && (
                           <>
-                            {(device.deviceInfo as any).browser && (
+                            {device.deviceInfo.browser && (
                               <div className="truncate">
-                                {(device.deviceInfo as any).browser}
+                                {device.deviceInfo.browser}
                               </div>
                             )}
-                            {(device.deviceInfo as any).os && (
+                            {device.deviceInfo.os && (
                               <div className="truncate">
-                                {(device.deviceInfo as any).os}
+                                {device.deviceInfo.os}
                               </div>
                             )}
                           </>

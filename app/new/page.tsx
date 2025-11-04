@@ -34,7 +34,7 @@ export default function NewEntryPage() {
       setEntry(newEntry);
     };
     initEntry();
-  }, []);
+  }, [createEntry]);
 
   const handleSave = useCallback(async (updatedEntry: JournalEntry) => {
     const saved = await updateEntry(updatedEntry);

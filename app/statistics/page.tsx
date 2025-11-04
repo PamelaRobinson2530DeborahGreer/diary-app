@@ -1,7 +1,7 @@
 // app/statistics/page.tsx
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { secureStorage } from '@/services/secureStorage';
 import { statisticsService } from '@/services/statisticsService';
@@ -24,11 +24,7 @@ export default function StatisticsPage() {
   const [goalProgress, setGoalProgress] = useState<GoalProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       // 检查是否已解锁
       const isUnlocked = await secureStorage.isUnlocked();
@@ -70,7 +66,11 @@ export default function StatisticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   // 生成热力图数据
   const heatmapData = useMemo(() => {
@@ -87,7 +87,7 @@ export default function StatisticsPage() {
   const handleCreateGoal = async () => {
     // 简单实现：创建一个默认的每日目标
     await goalService.createGoal('daily', 1, 'entries');
-    loadData(); // 重新加载数据
+    await loadData(); // 重新加载数据
   };
 
   if (loading) {

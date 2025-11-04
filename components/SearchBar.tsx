@@ -3,7 +3,7 @@
 import { Tag, TagID } from '@/models/entry';
 import { tagService } from '@/services/tagService';
 import { SearchQuery } from '@/services/searchService';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface SearchBarProps {
   onSearch: (query: SearchQuery) => void;
@@ -24,21 +24,7 @@ export default function SearchBar({ onSearch, className = '' }: SearchBarProps) 
     loadTags();
   }, []);
 
-  useEffect(() => {
-    // Debounce search
-    const timer = setTimeout(() => {
-      performSearch();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [text, selectedTags, selectedMoods, dateRange]);
-
-  const loadTags = async () => {
-    const tags = await tagService.loadTags();
-    setAllTags(tags);
-  };
-
-  const performSearch = () => {
+  const performSearch = useCallback(() => {
     const query: SearchQuery = {};
 
     if (text.trim()) {
@@ -61,6 +47,20 @@ export default function SearchBar({ onSearch, className = '' }: SearchBarProps) 
     }
 
     onSearch(query);
+  }, [dateRange.end, dateRange.start, onSearch, selectedMoods, selectedTags, text]);
+
+  useEffect(() => {
+    // Debounce search
+    const timer = setTimeout(() => {
+      performSearch();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [performSearch]);
+
+  const loadTags = async () => {
+    const tags = await tagService.loadTags();
+    setAllTags(tags);
   };
 
   const handleToggleMood = (mood: string) => {

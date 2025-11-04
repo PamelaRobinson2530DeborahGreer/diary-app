@@ -4,7 +4,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Conflict, JournalEntry } from '@/models/entry';
+import { Conflict } from '@/models/entry';
 import { logger } from '@/utils/logger';
 
 interface ConflictResolverProps {

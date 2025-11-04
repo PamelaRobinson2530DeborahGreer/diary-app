@@ -110,7 +110,6 @@ export default function PerformanceTestPage() {
 
   const testSearchPerformance = async (allEntries: JournalEntry[]) => {
     // 测试 1: 全文搜索
-    const start1 = performance.now();
     const result1 = searchService.search(allEntries, { text: '工作' });
     const duration1 = result1.duration;
 
@@ -125,7 +124,6 @@ export default function PerformanceTestPage() {
     const tags = await tagService.loadTags();
     const tagIds = tags.slice(0, 2).map(t => t.id);
 
-    const start2 = performance.now();
     const result2 = searchService.search(allEntries, { tags: tagIds });
     const duration2 = result2.duration;
 
@@ -137,7 +135,6 @@ export default function PerformanceTestPage() {
     });
 
     // 测试 3: 心情筛选
-    const start3 = performance.now();
     const result3 = searchService.search(allEntries, { moods: ['😊', '😎', '🥳'] });
     const duration3 = result3.duration;
 
@@ -153,7 +150,6 @@ export default function PerformanceTestPage() {
     const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const start4 = performance.now();
     const result4 = searchService.search(allEntries, {
       dateRange: { start: thirtyDaysAgo, end: now }
     });
@@ -167,7 +163,6 @@ export default function PerformanceTestPage() {
     });
 
     // 测试 5: 组合筛选
-    const start5 = performance.now();
     const result5 = searchService.search(allEntries, {
       text: '完成',
       tags: tagIds,

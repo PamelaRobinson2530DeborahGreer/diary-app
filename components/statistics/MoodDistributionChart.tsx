@@ -12,8 +12,6 @@ export default function MoodDistributionChart({
   data,
   className = ''
 }: MoodDistributionChartProps) {
-  const maxCount = Math.max(...data.map(d => d.count), 1);
-
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 ${className}`}>
       <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
